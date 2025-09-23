@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Save, Trash2, Archive, Settings as SettingsIcon } from 'lucide-react';
+import { Save, Trash2 } from 'lucide-react';
 import type { Project } from '../../types';
 import { projectsApi } from '../../services/api';
 
@@ -54,15 +54,15 @@ export const ProjectSettings: React.FC<ProjectSettingsProps> = ({ project, onPro
     }
   };
 
-  const getStatusText = (status: string) => {
-    switch (status) {
-      case 'draft': return '草稿';
-      case 'active': return '进行中';
-      case 'completed': return '已完成';
-      case 'archived': return '已归档';
-      default: return status;
-    }
-  };
+  // const getStatusText = (status: string) => {
+  //   switch (status) {
+  //     case 'draft': return '草稿';
+  //     case 'active': return '进行中';
+  //     case 'completed': return '已完成';
+  //     case 'archived': return '已归档';
+  //     default: return status;
+  //   }
+  // };
 
   return (
     <div className="space-y-6">

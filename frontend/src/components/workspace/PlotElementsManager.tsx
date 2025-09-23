@@ -13,7 +13,7 @@ export const PlotElementsManager: React.FC<PlotElementsManagerProps> = ({ projec
   const [expandedItems, setExpandedItems] = useState<Set<string>>(new Set());
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedType, setSelectedType] = useState<string>('all');
-  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [, setShowCreateModal] = useState(false);
 
   useEffect(() => {
     loadPlotElements();
@@ -31,15 +31,20 @@ export const PlotElementsManager: React.FC<PlotElementsManagerProps> = ({ projec
     }
   };
 
-  const buildHierarchy = (elements: PlotElement[]): PlotElement[] => {
-    const elementMap = new Map(elements.map(el => [el.id, { ...el, children: [] }]));
-    const rootElements: PlotElement[] = [];
+  const buildHierarchy = (elements: PlotElement[]): (PlotElement & { children: PlotElement[] })[] => {
+    const elementMap = new Map<string, PlotElement & { children: PlotElement[] }>();
+    const rootElements: (PlotElement & { children: PlotElement[] })[] = [];
 
+    // 初始化所有元素
+    elements.forEach(el => {
+      elementMap.set(el.id, { ...el, children: [] });
+    });
+
+    // 构建层级关系
     elements.forEach(element => {
       const el = elementMap.get(element.id)!;
       if (element.parentId && elementMap.has(element.parentId)) {
         const parent = elementMap.get(element.parentId)!;
-        parent.children = parent.children || [];
         parent.children.push(el);
       } else {
         rootElements.push(el);
@@ -173,7 +178,7 @@ export const PlotElementsManager: React.FC<PlotElementsManagerProps> = ({ projec
 
     return (
       <div key={element.id} className="mb-3">
-        <div className={`${getLevelStyles(level)} ${getImportanceBackground(element.importance)}`}>
+        <div className={`${getLevelStyles(level)} ${getImportanceBackground(1)}`}>
           <div className="flex items-start justify-between">
             <div className="flex items-start space-x-3 flex-1">
               <div className="flex items-center space-x-2">

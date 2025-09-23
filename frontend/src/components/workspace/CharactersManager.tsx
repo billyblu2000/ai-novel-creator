@@ -12,7 +12,7 @@ export const CharactersManager: React.FC<CharactersManagerProps> = ({ projectId 
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedRole, setSelectedRole] = useState<string>('all');
-  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [, setShowCreateModal] = useState(false);
 
   useEffect(() => {
     loadCharacters();

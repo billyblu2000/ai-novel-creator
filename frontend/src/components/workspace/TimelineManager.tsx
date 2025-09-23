@@ -13,7 +13,7 @@ export const TimelineManager: React.FC<TimelineManagerProps> = ({ projectId }) =
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedType, setSelectedType] = useState<string>('all');
-  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [, setShowCreateModal] = useState(false);
 
   useEffect(() => {
     loadTimelineData();
@@ -177,7 +177,7 @@ export const TimelineManager: React.FC<TimelineManagerProps> = ({ projectId }) =
                 ></div>
               )}
 
-              {filteredTimelines.map((timeline, index) => (
+              {filteredTimelines.map((timeline) => (
                 <div key={timeline.id} className="relative bg-white border border-gray-200 rounded-lg overflow-hidden">
                   {/* 时间轴节点 */}
                   {filteredTimelines.length > 1 && (

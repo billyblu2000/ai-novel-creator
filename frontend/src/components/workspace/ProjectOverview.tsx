@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Users, Globe, BookOpen, Clock, StickyNote, TrendingUp, Target, Calendar } from 'lucide-react';
+import { Users, Globe, BookOpen, Clock, StickyNote, Calendar } from 'lucide-react';
 import type { Project, ProjectStats } from '../../types';
 import { projectsApi } from '../../services/api';
 
@@ -8,7 +8,7 @@ interface ProjectOverviewProps {
   onProjectUpdate: (project: Project) => void;
 }
 
-export const ProjectOverview: React.FC<ProjectOverviewProps> = ({ project, onProjectUpdate }) => {
+export const ProjectOverview: React.FC<ProjectOverviewProps> = ({ project }) => {
   const [stats, setStats] = useState<ProjectStats | null>(null);
   const [loading, setLoading] = useState(true);
 

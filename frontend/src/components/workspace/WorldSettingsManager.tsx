@@ -22,7 +22,7 @@ export const WorldSettingsManager: React.FC<WorldSettingsManagerProps> = ({ proj
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
-  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [, setShowCreateModal] = useState(false);
 
   useEffect(() => {
     loadSettings();

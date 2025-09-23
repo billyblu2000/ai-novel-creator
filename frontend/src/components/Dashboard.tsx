@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Search, MoreHorizontal, Edit, Trash2, Archive, Users, Globe, BookOpen, Clock } from 'lucide-react';
+import { Plus, Search, MoreHorizontal, Users, Globe, BookOpen, Clock } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import type { Project, ProjectStats } from '../types';
 import { projectsApi } from '../services/api';
@@ -73,16 +73,16 @@ export const Dashboard: React.FC = () => {
     }
   };
 
-  const handleDeleteProject = async (id: string) => {
-    if (!confirm('确定要删除这个项目吗？')) return;
-    
-    try {
-      await projectsApi.delete(id);
-      setProjects(prev => prev.filter(p => p.id !== id));
-    } catch (error) {
-      console.error('Error deleting project:', error);
-    }
-  };
+  // const handleDeleteProject = async (id: string) => {
+  //   if (!confirm('确定要删除这个项目吗？')) return;
+  //   
+  //   try {
+  //     await projectsApi.delete(id);
+  //     setProjects(prev => prev.filter(p => p.id !== id));
+  //   } catch (error) {
+  //     console.error('Error deleting project:', error);
+  //   }
+  // };
 
   const handleProjectClick = (projectId: string) => {
     navigate(`/project/${projectId}`);
