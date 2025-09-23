@@ -136,7 +136,12 @@ export const CharactersManager: React.FC<CharactersManagerProps> = ({ projectId 
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {filteredCharacters.map((character) => (
-            <div key={character.id} className="bg-white border-2 border-gray-200 rounded-lg p-6 hover:border-black hover:shadow-md transition-all duration-200 cursor-pointer">
+            <div key={character.id} className={`border-2 border-gray-200 rounded-lg p-6 hover:border-black hover:shadow-md transition-all duration-200 cursor-pointer ${
+              character.importance >= 8 ? 'bg-gray-100' 
+              : character.importance >= 6 ? 'bg-slate-50'
+              : character.importance >= 4 ? 'bg-gray-50'
+              : 'bg-white'
+            }`}>
               <div className="flex items-start justify-between mb-4">
                 <div className="flex-1">
                   <h3 className="text-lg font-semibold text-gray-900 mb-1">{character.name}</h3>
@@ -158,15 +163,7 @@ export const CharactersManager: React.FC<CharactersManagerProps> = ({ projectId 
                 {character.description}
               </p>
               
-              <div className="flex items-center justify-between text-sm text-gray-500">
-                <span>重要程度: {character.importance}/10</span>
-                <div className="w-16 h-1 bg-gray-200 rounded-full">
-                  <div 
-                    className="h-1 bg-black rounded-full transition-all duration-300"
-                    style={{ width: `${character.importance * 10}%` }}
-                  />
-                </div>
-              </div>
+
             </div>
           ))}
         </div>

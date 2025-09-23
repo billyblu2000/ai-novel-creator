@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Search, Edit, Trash2, BookOpen, ChevronRight, ChevronDown } from 'lucide-react';
+import { Plus, Search, Edit, Trash2, BookOpen, ChevronRight, ChevronDown, Expand, Minimize2 } from 'lucide-react';
 import type { PlotElement } from '../../types';
 import { plotElementsApi } from '../../services/api';
 
@@ -70,6 +70,24 @@ export const PlotElementsManager: React.FC<PlotElementsManagerProps> = ({ projec
     setExpandedItems(newExpanded);
   };
 
+  const expandAll = () => {
+    const allIds = new Set<string>();
+    const collectIds = (elements: PlotElement[]) => {
+      elements.forEach(el => {
+        if (el.children && el.children.length > 0) {
+          allIds.add(el.id);
+          collectIds(el.children);
+        }
+      });
+    };
+    collectIds(hierarchicalElements);
+    setExpandedItems(allIds);
+  };
+
+  const collapseAll = () => {
+    setExpandedItems(new Set());
+  };
+
   const getTypeColor = (type: string) => {
     switch (type) {
       case 'book': return 'text-purple-600 bg-purple-100';
@@ -115,31 +133,70 @@ export const PlotElementsManager: React.FC<PlotElementsManagerProps> = ({ projec
   const renderPlotElement = (element: PlotElement, level: number = 0) => {
     const hasChildren = element.children && element.children.length > 0;
     const isExpanded = expandedItems.has(element.id);
+    
+    // 根据重要程度确定背景色（保持原有系统）
+    const getImportanceBackground = (importance: number = 5) => {
+      if (importance >= 8) return 'bg-gray-100';
+      if (importance >= 6) return 'bg-slate-50';
+      if (importance >= 4) return 'bg-gray-50';
+      return 'bg-white';
+    };
+    
+    // 根据层级确定样式（不使用背景色）
+    const getLevelStyles = (level: number) => {
+      const baseStyles = "border-2 border-gray-200 rounded-lg hover:border-black hover:shadow-md transition-all duration-200 cursor-pointer";
+      
+      switch (level) {
+        case 0: // 书级别
+          return `${baseStyles} p-6 shadow-sm border-gray-300`;
+        case 1: // 部级别  
+          return `${baseStyles} p-5 ml-6 border-l-4 border-l-blue-500`;
+        case 2: // 章级别
+          return `${baseStyles} p-4 ml-12 border-l-4 border-l-green-500`;
+        case 3: // 场景级别
+          return `${baseStyles} p-3 ml-18 border-l-4 border-l-yellow-500`;
+        default: // 更深层级
+          return `${baseStyles} p-3 ml-24 border-l-4 border-l-gray-500`;
+      }
+    };
+
+    const getTypeIcon = (type: string) => {
+      switch (type) {
+        case 'book': return '📚';
+        case 'part': return '📖';
+        case 'chapter': return '📄';
+        case 'scene': return '🎬';
+        case 'beat': return '🎵';
+        default: return '📝';
+      }
+    };
 
     return (
-      <div key={element.id} className="space-y-2">
-        <div 
-          className="bg-white border-2 border-gray-200 rounded-lg p-4 hover:border-black hover:shadow-md transition-all duration-200 cursor-pointer"
-          style={{ marginLeft: `${level * 24}px` }}
-        >
+      <div key={element.id} className="mb-3">
+        <div className={`${getLevelStyles(level)} ${getImportanceBackground(element.importance)}`}>
           <div className="flex items-start justify-between">
             <div className="flex items-start space-x-3 flex-1">
-              {hasChildren && (
-                <button
-                  onClick={() => toggleExpanded(element.id)}
-                  className="mt-1 p-1 hover:bg-gray-100 rounded transition-colors"
-                >
-                  {isExpanded ? (
-                    <ChevronDown className="w-4 h-4" />
-                  ) : (
-                    <ChevronRight className="w-4 h-4" />
-                  )}
-                </button>
-              )}
+              <div className="flex items-center space-x-2">
+                {hasChildren && (
+                  <button
+                    onClick={() => toggleExpanded(element.id)}
+                    className="p-1 hover:bg-white hover:bg-opacity-50 rounded transition-colors"
+                  >
+                    {isExpanded ? (
+                      <ChevronDown className="w-4 h-4 text-gray-600" />
+                    ) : (
+                      <ChevronRight className="w-4 h-4 text-gray-600" />
+                    )}
+                  </button>
+                )}
+                <span className="text-lg">{getTypeIcon(element.type)}</span>
+              </div>
               
               <div className="flex-1">
-                <div className="flex items-center space-x-2 mb-2">
-                  <h3 className="text-lg font-medium text-gray-900">{element.title}</h3>
+                <div className="flex items-center space-x-3 mb-2">
+                  <h3 className={`font-semibold text-gray-900 ${level === 0 ? 'text-xl' : level === 1 ? 'text-lg' : 'text-base'}`}>
+                    {element.title}
+                  </h3>
                   <span className={`px-2 py-1 rounded-full text-xs font-medium ${getTypeColor(element.type)}`}>
                     {getTypeText(element.type)}
                   </span>
@@ -183,8 +240,10 @@ export const PlotElementsManager: React.FC<PlotElementsManagerProps> = ({ projec
         </div>
         
         {hasChildren && isExpanded && (
-          <div className="space-y-2">
-            {element.children!.map(child => renderPlotElement(child, level + 1))}
+          <div className="mt-4 space-y-3">
+            {element.children!.map((child) => 
+              renderPlotElement(child, level + 1)
+            )}
           </div>
         )}
       </div>
@@ -218,36 +277,56 @@ export const PlotElementsManager: React.FC<PlotElementsManagerProps> = ({ projec
         </button>
       </div>
 
-      {/* Filters */}
-      <div className="flex flex-col sm:flex-row gap-4">
-        <div className="flex-1 relative">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-          <input
-            type="text"
-            placeholder="搜索情节..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:border-black focus:border-2 transition-colors"
-          />
-        </div>
-        <div className="relative">
-          <select
-            value={selectedType}
-            onChange={(e) => setSelectedType(e.target.value)}
-            className="pl-3 pr-8 py-2 border border-gray-300 rounded-md focus:outline-none focus:border-black focus:border-2 transition-colors appearance-none bg-white w-full"
-          >
-            <option value="all">所有类型</option>
-            <option value="book">书</option>
-            <option value="part">部</option>
-            <option value="chapter">章</option>
-            <option value="scene">场景</option>
-            <option value="beat">节拍</option>
-          </select>
-          <div className="absolute inset-y-0 right-0 flex items-center pr-2 pointer-events-none">
-            <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-            </svg>
+      {/* Filters and Controls */}
+      <div className="space-y-4">
+        <div className="flex flex-col sm:flex-row gap-4">
+          <div className="flex-1 relative">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+            <input
+              type="text"
+              placeholder="搜索情节..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:border-black focus:border-2 transition-colors"
+            />
           </div>
+          <div className="relative">
+            <select
+              value={selectedType}
+              onChange={(e) => setSelectedType(e.target.value)}
+              className="pl-3 pr-8 py-2 border border-gray-300 rounded-md focus:outline-none focus:border-black focus:border-2 transition-colors appearance-none bg-white w-full"
+            >
+              <option value="all">所有类型</option>
+              <option value="book">书</option>
+              <option value="part">部</option>
+              <option value="chapter">章</option>
+              <option value="scene">场景</option>
+              <option value="beat">节拍</option>
+            </select>
+            <div className="absolute inset-y-0 right-0 flex items-center pr-2 pointer-events-none">
+              <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+              </svg>
+            </div>
+          </div>
+        </div>
+        
+        {/* Expand/Collapse Controls */}
+        <div className="flex items-center space-x-2">
+          <button
+            onClick={expandAll}
+            className="flex items-center space-x-1 px-3 py-1 text-sm text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-md transition-colors"
+          >
+            <Expand className="w-4 h-4" />
+            <span>展开全部</span>
+          </button>
+          <button
+            onClick={collapseAll}
+            className="flex items-center space-x-1 px-3 py-1 text-sm text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-md transition-colors"
+          >
+            <Minimize2 className="w-4 h-4" />
+            <span>折叠全部</span>
+          </button>
         </div>
       </div>
 
@@ -266,7 +345,9 @@ export const PlotElementsManager: React.FC<PlotElementsManagerProps> = ({ projec
         </div>
       ) : (
         <div className="space-y-4">
-          {hierarchicalElements.map(element => renderPlotElement(element))}
+          {hierarchicalElements.map((element) => 
+            renderPlotElement(element, 0)
+          )}
         </div>
       )}
     </div>

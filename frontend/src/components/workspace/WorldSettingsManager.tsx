@@ -143,7 +143,12 @@ export const WorldSettingsManager: React.FC<WorldSettingsManagerProps> = ({ proj
               
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                 {categorySettings.map((setting) => (
-                  <div key={setting.id} className="bg-white border-2 border-gray-200 rounded-lg p-6 hover:border-black hover:shadow-md transition-all duration-200 cursor-pointer">
+                  <div key={setting.id} className={`border-2 border-gray-200 rounded-lg p-6 hover:border-black hover:shadow-md transition-all duration-200 cursor-pointer ${
+                    setting.importance >= 8 ? 'bg-gray-100' 
+                    : setting.importance >= 6 ? 'bg-slate-50'
+                    : setting.importance >= 4 ? 'bg-gray-50'
+                    : 'bg-white'
+                  }`}>
                     <div className="flex items-start justify-between mb-3">
                       <h4 className="text-lg font-medium text-gray-900">{setting.title}</h4>
                       <div className="flex items-center space-x-1">
@@ -160,15 +165,7 @@ export const WorldSettingsManager: React.FC<WorldSettingsManagerProps> = ({ proj
                       {setting.content}
                     </p>
                     
-                    <div className="flex items-center justify-between text-sm text-gray-500">
-                      <span>重要程度: {setting.importance}/10</span>
-                      <div className="w-16 h-1 bg-gray-200 rounded-full">
-                        <div 
-                          className="h-1 bg-black rounded-full transition-all duration-300"
-                          style={{ width: `${setting.importance * 10}%` }}
-                        />
-                      </div>
-                    </div>
+
                   </div>
                 ))}
               </div>
