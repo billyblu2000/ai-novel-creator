@@ -26,10 +26,10 @@ router.get('/:projectId', async (req, res) => {
       ]
     });
     
-    res.json(characters);
-  } catch (error) {
+    return res.json(characters);
+  } catch (error: any) {
     console.error('Error fetching characters:', error);
-    res.status(500).json({ error: 'Failed to fetch characters' });
+    return res.status(500).json({ error: 'Failed to fetch characters' });
   }
 });
 
@@ -55,10 +55,10 @@ router.get('/detail/:id', async (req, res) => {
       return res.status(404).json({ error: 'Character not found' });
     }
     
-    res.json(character);
-  } catch (error) {
+    return res.json(character);
+  } catch (error: any) {
     console.error('Error fetching character:', error);
-    res.status(500).json({ error: 'Failed to fetch character' });
+    return res.status(500).json({ error: 'Failed to fetch character' });
   }
 });
 
@@ -81,10 +81,10 @@ router.post('/', async (req, res) => {
       }
     });
     
-    res.status(201).json(character);
-  } catch (error) {
+    return res.status(201).json(character);
+  } catch (error: any) {
     console.error('Error creating character:', error);
-    res.status(500).json({ error: 'Failed to create character' });
+    return res.status(500).json({ error: 'Failed to create character' });
   }
 });
 
@@ -104,13 +104,13 @@ router.put('/:id', async (req, res) => {
       }
     });
     
-    res.json(character);
-  } catch (error) {
+    return res.json(character);
+  } catch (error: any) {
     console.error('Error updating character:', error);
     if (error.code === 'P2025') {
       return res.status(404).json({ error: 'Character not found' });
     }
-    res.status(500).json({ error: 'Failed to update character' });
+    return res.status(500).json({ error: 'Failed to update character' });
   }
 });
 
@@ -123,13 +123,13 @@ router.delete('/:id', async (req, res) => {
       where: { id }
     });
     
-    res.status(204).send();
-  } catch (error) {
+    return res.status(204).send();
+  } catch (error: any) {
     console.error('Error deleting character:', error);
     if (error.code === 'P2025') {
       return res.status(404).json({ error: 'Character not found' });
     }
-    res.status(500).json({ error: 'Failed to delete character' });
+    return res.status(500).json({ error: 'Failed to delete character' });
   }
 });
 

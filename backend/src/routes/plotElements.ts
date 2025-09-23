@@ -50,10 +50,10 @@ router.get('/:projectId', async (req, res) => {
       orderBy: { order: 'asc' }
     });
     
-    res.json(plotElements);
-  } catch (error) {
+    return res.json(plotElements);
+  } catch (error: any) {
     console.error('Error fetching plot elements:', error);
-    res.status(500).json({ error: 'Failed to fetch plot elements' });
+    return res.status(500).json({ error: 'Failed to fetch plot elements' });
   }
 });
 
@@ -100,10 +100,10 @@ router.get('/detail/:id', async (req, res) => {
       return res.status(404).json({ error: 'Plot element not found' });
     }
     
-    res.json(plotElement);
-  } catch (error) {
+    return res.json(plotElement);
+  } catch (error: any) {
     console.error('Error fetching plot element:', error);
-    res.status(500).json({ error: 'Failed to fetch plot element' });
+    return res.status(500).json({ error: 'Failed to fetch plot element' });
   }
 });
 
@@ -155,10 +155,10 @@ router.post('/', async (req, res) => {
       }
     });
     
-    res.status(201).json(plotElement);
-  } catch (error) {
+    return res.status(201).json(plotElement);
+  } catch (error: any) {
     console.error('Error creating plot element:', error);
-    res.status(500).json({ error: 'Failed to create plot element' });
+    return res.status(500).json({ error: 'Failed to create plot element' });
   }
 });
 
@@ -201,13 +201,13 @@ router.put('/:id', async (req, res) => {
       }
     });
     
-    res.json(plotElement);
-  } catch (error) {
+    return res.json(plotElement);
+  } catch (error: any) {
     console.error('Error updating plot element:', error);
     if (error.code === 'P2025') {
       return res.status(404).json({ error: 'Plot element not found' });
     }
-    res.status(500).json({ error: 'Failed to update plot element' });
+    return res.status(500).json({ error: 'Failed to update plot element' });
   }
 });
 
@@ -231,13 +231,13 @@ router.delete('/:id', async (req, res) => {
       where: { id }
     });
     
-    res.status(204).send();
-  } catch (error) {
+    return res.status(204).send();
+  } catch (error: any) {
     console.error('Error deleting plot element:', error);
     if (error.code === 'P2025') {
       return res.status(404).json({ error: 'Plot element not found' });
     }
-    res.status(500).json({ error: 'Failed to delete plot element' });
+    return res.status(500).json({ error: 'Failed to delete plot element' });
   }
 });
 
@@ -265,13 +265,13 @@ router.post('/:id/characters', async (req, res) => {
       }
     });
     
-    res.status(201).json(relation);
-  } catch (error) {
+    return res.status(201).json(relation);
+  } catch (error: any) {
     console.error('Error linking character to plot element:', error);
     if (error.code === 'P2002') {
       return res.status(400).json({ error: 'Character already linked to this plot element' });
     }
-    res.status(500).json({ error: 'Failed to link character' });
+    return res.status(500).json({ error: 'Failed to link character' });
   }
 });
 
@@ -289,13 +289,13 @@ router.delete('/:id/characters/:characterId', async (req, res) => {
       }
     });
     
-    res.status(204).send();
-  } catch (error) {
+    return res.status(204).send();
+  } catch (error: any) {
     console.error('Error unlinking character from plot element:', error);
     if (error.code === 'P2025') {
       return res.status(404).json({ error: 'Character relation not found' });
     }
-    res.status(500).json({ error: 'Failed to unlink character' });
+    return res.status(500).json({ error: 'Failed to unlink character' });
   }
 });
 
@@ -322,13 +322,13 @@ router.post('/:id/settings', async (req, res) => {
       }
     });
     
-    res.status(201).json(relation);
-  } catch (error) {
+    return res.status(201).json(relation);
+  } catch (error: any) {
     console.error('Error linking setting to plot element:', error);
     if (error.code === 'P2002') {
       return res.status(400).json({ error: 'Setting already linked to this plot element' });
     }
-    res.status(500).json({ error: 'Failed to link setting' });
+    return res.status(500).json({ error: 'Failed to link setting' });
   }
 });
 
@@ -346,13 +346,13 @@ router.delete('/:id/settings/:settingId', async (req, res) => {
       }
     });
     
-    res.status(204).send();
-  } catch (error) {
+    return res.status(204).send();
+  } catch (error: any) {
     console.error('Error unlinking setting from plot element:', error);
     if (error.code === 'P2025') {
       return res.status(404).json({ error: 'Setting relation not found' });
     }
-    res.status(500).json({ error: 'Failed to unlink setting' });
+    return res.status(500).json({ error: 'Failed to unlink setting' });
   }
 });
 

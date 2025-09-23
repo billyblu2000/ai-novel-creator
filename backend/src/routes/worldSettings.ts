@@ -33,10 +33,10 @@ router.get('/:projectId', async (req, res) => {
       ]
     });
     
-    res.json(worldSettings);
-  } catch (error) {
+    return res.json(worldSettings);
+  } catch (error: any) {
     console.error('Error fetching world settings:', error);
-    res.status(500).json({ error: 'Failed to fetch world settings' });
+    return res.status(500).json({ error: 'Failed to fetch world settings' });
   }
 });
 
@@ -62,10 +62,10 @@ router.get('/detail/:id', async (req, res) => {
       return res.status(404).json({ error: 'World setting not found' });
     }
     
-    res.json(worldSetting);
-  } catch (error) {
+    return res.json(worldSetting);
+  } catch (error: any) {
     console.error('Error fetching world setting:', error);
-    res.status(500).json({ error: 'Failed to fetch world setting' });
+    return res.status(500).json({ error: 'Failed to fetch world setting' });
   }
 });
 
@@ -90,10 +90,10 @@ router.post('/', async (req, res) => {
       }
     });
     
-    res.status(201).json(worldSetting);
-  } catch (error) {
+    return res.status(201).json(worldSetting);
+  } catch (error: any) {
     console.error('Error creating world setting:', error);
-    res.status(500).json({ error: 'Failed to create world setting' });
+    return res.status(500).json({ error: 'Failed to create world setting' });
   }
 });
 
@@ -113,13 +113,13 @@ router.put('/:id', async (req, res) => {
       }
     });
     
-    res.json(worldSetting);
-  } catch (error) {
+    return res.json(worldSetting);
+  } catch (error: any) {
     console.error('Error updating world setting:', error);
     if (error.code === 'P2025') {
       return res.status(404).json({ error: 'World setting not found' });
     }
-    res.status(500).json({ error: 'Failed to update world setting' });
+    return res.status(500).json({ error: 'Failed to update world setting' });
   }
 });
 
@@ -132,13 +132,13 @@ router.delete('/:id', async (req, res) => {
       where: { id }
     });
     
-    res.status(204).send();
-  } catch (error) {
+    return res.status(204).send();
+  } catch (error: any) {
     console.error('Error deleting world setting:', error);
     if (error.code === 'P2025') {
       return res.status(404).json({ error: 'World setting not found' });
     }
-    res.status(500).json({ error: 'Failed to delete world setting' });
+    return res.status(500).json({ error: 'Failed to delete world setting' });
   }
 });
 
@@ -154,10 +154,10 @@ router.get('/categories/:projectId', async (req, res) => {
     });
     
     const categoryList = categories.map(item => item.category);
-    res.json(categoryList);
-  } catch (error) {
+    return res.json(categoryList);
+  } catch (error: any) {
     console.error('Error fetching categories:', error);
-    res.status(500).json({ error: 'Failed to fetch categories' });
+    return res.status(500).json({ error: 'Failed to fetch categories' });
   }
 });
 

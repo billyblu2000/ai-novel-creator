@@ -31,10 +31,10 @@ router.get('/:projectId', async (req, res) => {
       ]
     });
     
-    res.json(projectNotes);
-  } catch (error) {
+    return res.json(projectNotes);
+  } catch (error: any) {
     console.error('Error fetching project notes:', error);
-    res.status(500).json({ error: 'Failed to fetch project notes' });
+    return res.status(500).json({ error: 'Failed to fetch project notes' });
   }
 });
 
@@ -51,10 +51,10 @@ router.get('/detail/:id', async (req, res) => {
       return res.status(404).json({ error: 'Project note not found' });
     }
     
-    res.json(projectNote);
-  } catch (error) {
+    return res.json(projectNote);
+  } catch (error: any) {
     console.error('Error fetching project note:', error);
-    res.status(500).json({ error: 'Failed to fetch project note' });
+    return res.status(500).json({ error: 'Failed to fetch project note' });
   }
 });
 
@@ -79,10 +79,10 @@ router.post('/', async (req, res) => {
       }
     });
     
-    res.status(201).json(projectNote);
-  } catch (error) {
+    return res.status(201).json(projectNote);
+  } catch (error: any) {
     console.error('Error creating project note:', error);
-    res.status(500).json({ error: 'Failed to create project note' });
+    return res.status(500).json({ error: 'Failed to create project note' });
   }
 });
 
@@ -103,13 +103,13 @@ router.put('/:id', async (req, res) => {
       data: updateData
     });
     
-    res.json(projectNote);
-  } catch (error) {
+    return res.json(projectNote);
+  } catch (error: any) {
     console.error('Error updating project note:', error);
     if (error.code === 'P2025') {
       return res.status(404).json({ error: 'Project note not found' });
     }
-    res.status(500).json({ error: 'Failed to update project note' });
+    return res.status(500).json({ error: 'Failed to update project note' });
   }
 });
 
@@ -122,13 +122,13 @@ router.delete('/:id', async (req, res) => {
       where: { id }
     });
     
-    res.status(204).send();
-  } catch (error) {
+    return res.status(204).send();
+  } catch (error: any) {
     console.error('Error deleting project note:', error);
     if (error.code === 'P2025') {
       return res.status(404).json({ error: 'Project note not found' });
     }
-    res.status(500).json({ error: 'Failed to delete project note' });
+    return res.status(500).json({ error: 'Failed to delete project note' });
   }
 });
 
@@ -144,10 +144,10 @@ router.get('/categories/:projectId', async (req, res) => {
     });
     
     const categoryList = categories.map(item => item.category);
-    res.json(categoryList);
-  } catch (error) {
+    return res.json(categoryList);
+  } catch (error: any) {
     console.error('Error fetching note categories:', error);
-    res.status(500).json({ error: 'Failed to fetch note categories' });
+    return res.status(500).json({ error: 'Failed to fetch note categories' });
   }
 });
 
@@ -168,10 +168,10 @@ router.get('/tags/:projectId', async (req, res) => {
     
     const uniqueTags = [...new Set(allTags)].sort();
     
-    res.json(uniqueTags);
-  } catch (error) {
+    return res.json(uniqueTags);
+  } catch (error: any) {
     console.error('Error fetching note tags:', error);
-    res.status(500).json({ error: 'Failed to fetch note tags' });
+    return res.status(500).json({ error: 'Failed to fetch note tags' });
   }
 });
 

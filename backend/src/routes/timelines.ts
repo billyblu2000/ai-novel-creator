@@ -23,10 +23,10 @@ router.get('/:projectId', async (req, res) => {
       orderBy: { chronOrder: 'asc' }
     });
     
-    res.json(timelines);
-  } catch (error) {
+    return res.json(timelines);
+  } catch (error: any) {
     console.error('Error fetching timelines:', error);
-    res.status(500).json({ error: 'Failed to fetch timelines' });
+    return res.status(500).json({ error: 'Failed to fetch timelines' });
   }
 });
 
@@ -58,10 +58,10 @@ router.get('/detail/:id', async (req, res) => {
       return res.status(404).json({ error: 'Timeline not found' });
     }
     
-    res.json(timeline);
-  } catch (error) {
+    return res.json(timeline);
+  } catch (error: any) {
     console.error('Error fetching timeline:', error);
-    res.status(500).json({ error: 'Failed to fetch timeline' });
+    return res.status(500).json({ error: 'Failed to fetch timeline' });
   }
 });
 
@@ -103,10 +103,10 @@ router.post('/', async (req, res) => {
       }
     });
     
-    res.status(201).json(timeline);
-  } catch (error) {
+    return res.status(201).json(timeline);
+  } catch (error: any) {
     console.error('Error creating timeline:', error);
-    res.status(500).json({ error: 'Failed to create timeline' });
+    return res.status(500).json({ error: 'Failed to create timeline' });
   }
 });
 
@@ -133,13 +133,13 @@ router.put('/:id', async (req, res) => {
       data: updateData
     });
     
-    res.json(timeline);
-  } catch (error) {
+    return res.json(timeline);
+  } catch (error: any) {
     console.error('Error updating timeline:', error);
     if (error.code === 'P2025') {
       return res.status(404).json({ error: 'Timeline not found' });
     }
-    res.status(500).json({ error: 'Failed to update timeline' });
+    return res.status(500).json({ error: 'Failed to update timeline' });
   }
 });
 
@@ -152,13 +152,13 @@ router.delete('/:id', async (req, res) => {
       where: { id }
     });
     
-    res.status(204).send();
-  } catch (error) {
+    return res.status(204).send();
+  } catch (error: any) {
     console.error('Error deleting timeline:', error);
     if (error.code === 'P2025') {
       return res.status(404).json({ error: 'Timeline not found' });
     }
-    res.status(500).json({ error: 'Failed to delete timeline' });
+    return res.status(500).json({ error: 'Failed to delete timeline' });
   }
 });
 
@@ -188,13 +188,13 @@ router.post('/:id/plot-elements', async (req, res) => {
       }
     });
     
-    res.status(201).json(relation);
-  } catch (error) {
+    return res.status(201).json(relation);
+  } catch (error: any) {
     console.error('Error linking plot element to timeline:', error);
     if (error.code === 'P2002') {
       return res.status(400).json({ error: 'Plot element already linked to this timeline' });
     }
-    res.status(500).json({ error: 'Failed to link plot element' });
+    return res.status(500).json({ error: 'Failed to link plot element' });
   }
 });
 
@@ -212,13 +212,13 @@ router.delete('/:id/plot-elements/:plotElementId', async (req, res) => {
       }
     });
     
-    res.status(204).send();
-  } catch (error) {
+    return res.status(204).send();
+  } catch (error: any) {
     console.error('Error unlinking plot element from timeline:', error);
     if (error.code === 'P2025') {
       return res.status(404).json({ error: 'Plot element relation not found' });
     }
-    res.status(500).json({ error: 'Failed to unlink plot element' });
+    return res.status(500).json({ error: 'Failed to unlink plot element' });
   }
 });
 
@@ -247,13 +247,13 @@ router.put('/:id/plot-elements/:plotElementId', async (req, res) => {
       }
     });
     
-    res.json(relation);
-  } catch (error) {
+    return res.json(relation);
+  } catch (error: any) {
     console.error('Error updating plot element timeline relation:', error);
     if (error.code === 'P2025') {
       return res.status(404).json({ error: 'Plot element relation not found' });
     }
-    res.status(500).json({ error: 'Failed to update relation' });
+    return res.status(500).json({ error: 'Failed to update relation' });
   }
 });
 
