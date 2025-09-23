@@ -5,15 +5,15 @@ const router = express.Router();
 const prisma = new PrismaClient();
 
 // GET /api/projects - 获取所有项目
-router.get('/', async (req, res) => {
+router.get('/', async (_req, res) => {
   try {
     const projects = await prisma.project.findMany({
       orderBy: { updatedAt: 'desc' }
     });
-    res.json(projects);
+    return res.json(projects);
   } catch (error) {
     console.error('Error fetching projects:', error);
-    res.status(500).json({ error: 'Failed to fetch projects' });
+    return res.status(500).json({ error: 'Failed to fetch projects' });
   }
 });
 
@@ -29,10 +29,10 @@ router.get('/:id', async (req, res) => {
       return res.status(404).json({ error: 'Project not found' });
     }
     
-    res.json(project);
+    return res.json(project);
   } catch (error) {
     console.error('Error fetching project:', error);
-    res.status(500).json({ error: 'Failed to fetch project' });
+    return res.status(500).json({ error: 'Failed to fetch project' });
   }
 });
 
@@ -52,10 +52,10 @@ router.post('/', async (req, res) => {
       }
     });
     
-    res.status(201).json(project);
+    return res.status(201).json(project);
   } catch (error) {
     console.error('Error creating project:', error);
-    res.status(500).json({ error: 'Failed to create project' });
+    return res.status(500).json({ error: 'Failed to create project' });
   }
 });
 
@@ -75,13 +75,13 @@ router.put('/:id', async (req, res) => {
       data: updateData
     });
     
-    res.json(project);
+    return res.json(project);
   } catch (error: any) {
     console.error('Error updating project:', error);
     if (error.code === 'P2025') {
       return res.status(404).json({ error: 'Project not found' });
     }
-    res.status(500).json({ error: 'Failed to update project' });
+    return res.status(500).json({ error: 'Failed to update project' });
   }
 });
 
@@ -94,13 +94,13 @@ router.delete('/:id', async (req, res) => {
       where: { id }
     });
     
-    res.status(204).send();
+    return res.status(204).send();
   } catch (error: any) {
     console.error('Error deleting project:', error);
     if (error.code === 'P2025') {
       return res.status(404).json({ error: 'Project not found' });
     }
-    res.status(500).json({ error: 'Failed to delete project' });
+    return res.status(500).json({ error: 'Failed to delete project' });
   }
 });
 
