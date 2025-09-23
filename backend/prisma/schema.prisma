@@ -10,12 +10,171 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+// 1. 项目模型
 model Project {
   id          String   @id @default(cuid())
   title       String
   description String?
+  genre       String?  // 小说类型：fantasy, romance, mystery, etc.
   status      String   @default("draft") // draft, active, completed, archived
   wordCount   Int      @default(0)
+  targetWords Int?     // 目标字数
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+  
+  // 关联关系
+  characters    Character[]
+  worldSettings WorldSetting[]
+  plotElements  PlotElement[]
+  timelines     Timeline[]
+  notes         ProjectNote[]
+}
+
+// 2. 角色模型
+model Character {
+  id          String   @id @default(cuid())
+  projectId   String
+  name        String
+  role        String   // protagonist, antagonist, supporting, minor
+  description String   // 自由文本：外貌、性格、背景、关系等
+  importance  Int      @default(5) // 1-10 重要程度
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  project     Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  plotElements PlotElementCharacter[]
+}
+
+// 3. 世界设定模型
+model WorldSetting {
+  id          String   @id @default(cuid())
+  projectId   String
+  category    String   // background, culture, geography, technology, magic, society, history
+  title       String
+  content     String   // 自由文本描述
+  importance  Int      @default(5) // 1-10 重要程度
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  project     Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  plotElements PlotElementSetting[]
+}
+
+// 4. 核心模型：PlotElement - 统一的情节/章节模型
+model PlotElement {
+  id          String   @id @default(cuid())
+  projectId   String
+  
+  // 基本信息
+  title       String
+  type        String   // "book", "part", "chapter", "scene", "beat"
+  order       Int      // 创作/阅读顺序
+  parentId    String?  // 支持嵌套层级
+  
+  // 情节内容
+  summary     String?  // 情节概要/大纲
+  content     String   @default("") // 实际写作内容
+  notes       String?  // 创作笔记
+  
+  // 状态管理
+  status      String   @default("planned") // planned, outlined, drafted, completed
+  wordCount   Int      @default(0)
+  targetWords Int?     // 目标字数
+  
+  // 创作元数据
+  mood        String?  // 情绪基调：tense, romantic, mysterious, etc.
+  pov         String?  // 视角：first_person, third_person, etc.
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  // 关联关系
+  project     Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  parent      PlotElement? @relation("PlotHierarchy", fields: [parentId], references: [id])
+  children    PlotElement[] @relation("PlotHierarchy")
+  
+  // 情节关联
+  characters  PlotElementCharacter[]
+  settings    PlotElementSetting[]
+  timelines   PlotElementTimeline[]
+}
+
+// 5. 情节-角色关联表
+model PlotElementCharacter {
+  id            String   @id @default(cuid())
+  plotElementId String
+  characterId   String
+  role          String?  // 在这个情节中的作用：protagonist, antagonist, witness, etc.
+  importance    Int      @default(5) // 1-10 在此情节中的重要程度
+  
+  plotElement   PlotElement @relation(fields: [plotElementId], references: [id], onDelete: Cascade)
+  character     Character   @relation(fields: [characterId], references: [id], onDelete: Cascade)
+  
+  @@unique([plotElementId, characterId])
+}
+
+// 6. 情节-设定关联表
+model PlotElementSetting {
+  id            String   @id @default(cuid())
+  plotElementId String
+  settingId     String
+  relevance     String?  // 相关性描述
+  
+  plotElement   PlotElement   @relation(fields: [plotElementId], references: [id], onDelete: Cascade)
+  setting       WorldSetting  @relation(fields: [settingId], references: [id], onDelete: Cascade)
+  
+  @@unique([plotElementId, settingId])
+}
+
+// 7. 时间线模型
+model Timeline {
+  id          String   @id @default(cuid())
+  projectId   String
+  
+  // 时间信息
+  name        String   // 时间点名称："第一天早晨", "三年前", "决战之夜"
+  description String?  // 时间点描述
+  storyDate   String?  // 故事内的具体日期："2024-03-15", "龙历1024年春"
+  timeType    String   // absolute, relative, symbolic
+  
+  // 排序和重要性
+  chronOrder  Int      // 按故事时间的先后顺序
+  importance  Int      @default(5) // 1-10 重要程度
+  
+  // 时间跨度
+  duration    String?  // 持续时间："2小时", "三天", "一个月"
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  project     Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  plotElements PlotElementTimeline[]
+}
+
+// 8. 情节-时间线关联表
+model PlotElementTimeline {
+  id            String   @id @default(cuid())
+  plotElementId String
+  timelineId    String
+  relationship  String   // main, flashback, foreshadowing, parallel
+  description   String?  // 关系描述
+  
+  plotElement   PlotElement @relation(fields: [plotElementId], references: [id], onDelete: Cascade)
+  timeline      Timeline    @relation(fields: [timelineId], references: [id], onDelete: Cascade)
+  
+  @@unique([plotElementId, timelineId])
+}
+
+// 9. 项目笔记模型
+model ProjectNote {
+  id          String   @id @default(cuid())
+  projectId   String
+  title       String
+  content     String
+  category    String   // inspiration, research, todo, idea, reference
+  tags        String[] // 标签数组
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  project     Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
 }

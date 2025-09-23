@@ -1,0 +1,359 @@
+import express from 'express';
+import { PrismaClient } from '@prisma/client';
+
+const router = express.Router();
+const prisma = new PrismaClient();
+
+// GET /api/plot-elements/:projectId - 获取项目的所有情节元素
+router.get('/:projectId', async (req, res) => {
+  try {
+    const { projectId } = req.params;
+    const { type, parentId } = req.query;
+    
+    const whereClause: any = { projectId };
+    if (type) whereClause.type = type;
+    if (parentId) whereClause.parentId = parentId;
+    if (parentId === 'null') whereClause.parentId = null;
+    
+    const plotElements = await prisma.plotElement.findMany({
+      where: whereClause,
+      include: {
+        parent: {
+          select: { id: true, title: true, type: true }
+        },
+        children: {
+          select: { id: true, title: true, type: true, order: true, status: true },
+          orderBy: { order: 'asc' }
+        },
+        characters: {
+          include: {
+            character: {
+              select: { id: true, name: true, role: true }
+            }
+          }
+        },
+        settings: {
+          include: {
+            setting: {
+              select: { id: true, title: true, category: true }
+            }
+          }
+        },
+        timelines: {
+          include: {
+            timeline: {
+              select: { id: true, name: true, chronOrder: true }
+            }
+          }
+        }
+      },
+      orderBy: { order: 'asc' }
+    });
+    
+    res.json(plotElements);
+  } catch (error) {
+    console.error('Error fetching plot elements:', error);
+    res.status(500).json({ error: 'Failed to fetch plot elements' });
+  }
+});
+
+// GET /api/plot-elements/detail/:id - 获取单个情节元素详情
+router.get('/detail/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    const plotElement = await prisma.plotElement.findUnique({
+      where: { id },
+      include: {
+        parent: {
+          select: { id: true, title: true, type: true }
+        },
+        children: {
+          select: { id: true, title: true, type: true, order: true, status: true, wordCount: true },
+          orderBy: { order: 'asc' }
+        },
+        characters: {
+          include: {
+            character: {
+              select: { id: true, name: true, role: true, description: true }
+            }
+          }
+        },
+        settings: {
+          include: {
+            setting: {
+              select: { id: true, title: true, category: true, content: true }
+            }
+          }
+        },
+        timelines: {
+          include: {
+            timeline: {
+              select: { id: true, name: true, description: true, chronOrder: true, storyDate: true }
+            }
+          }
+        }
+      }
+    });
+    
+    if (!plotElement) {
+      return res.status(404).json({ error: 'Plot element not found' });
+    }
+    
+    res.json(plotElement);
+  } catch (error) {
+    console.error('Error fetching plot element:', error);
+    res.status(500).json({ error: 'Failed to fetch plot element' });
+  }
+});
+
+// POST /api/plot-elements - 创建新情节元素
+router.post('/', async (req, res) => {
+  try {
+    const { 
+      projectId, title, type, parentId, summary, content, notes,
+      status, targetWords, mood, pov, order 
+    } = req.body;
+    
+    if (!projectId || !title || !type) {
+      return res.status(400).json({ 
+        error: 'Missing required fields: projectId, title, type' 
+      });
+    }
+    
+    // 如果没有提供order，自动计算
+    let elementOrder = order;
+    if (elementOrder === undefined) {
+      const maxOrder = await prisma.plotElement.findFirst({
+        where: { projectId, parentId: parentId || null },
+        orderBy: { order: 'desc' },
+        select: { order: true }
+      });
+      elementOrder = (maxOrder?.order || 0) + 1;
+    }
+    
+    const plotElement = await prisma.plotElement.create({
+      data: {
+        projectId,
+        title: title.trim(),
+        type,
+        order: elementOrder,
+        parentId: parentId || null,
+        summary: summary || null,
+        content: content || '',
+        notes: notes || null,
+        status: status || 'planned',
+        targetWords: targetWords || null,
+        mood: mood || null,
+        pov: pov || null,
+        wordCount: content ? content.length : 0
+      },
+      include: {
+        parent: {
+          select: { id: true, title: true, type: true }
+        }
+      }
+    });
+    
+    res.status(201).json(plotElement);
+  } catch (error) {
+    console.error('Error creating plot element:', error);
+    res.status(500).json({ error: 'Failed to create plot element' });
+  }
+});
+
+// PUT /api/plot-elements/:id - 更新情节元素
+router.put('/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { 
+      title, type, order, parentId, summary, content, notes,
+      status, targetWords, mood, pov 
+    } = req.body;
+    
+    const updateData: any = {};
+    if (title) updateData.title = title.trim();
+    if (type) updateData.type = type;
+    if (order !== undefined) updateData.order = order;
+    if (parentId !== undefined) updateData.parentId = parentId || null;
+    if (summary !== undefined) updateData.summary = summary || null;
+    if (content !== undefined) {
+      updateData.content = content;
+      updateData.wordCount = content.length;
+    }
+    if (notes !== undefined) updateData.notes = notes || null;
+    if (status) updateData.status = status;
+    if (targetWords !== undefined) updateData.targetWords = targetWords || null;
+    if (mood !== undefined) updateData.mood = mood || null;
+    if (pov !== undefined) updateData.pov = pov || null;
+    
+    const plotElement = await prisma.plotElement.update({
+      where: { id },
+      data: updateData,
+      include: {
+        parent: {
+          select: { id: true, title: true, type: true }
+        },
+        children: {
+          select: { id: true, title: true, type: true, order: true, status: true },
+          orderBy: { order: 'asc' }
+        }
+      }
+    });
+    
+    res.json(plotElement);
+  } catch (error) {
+    console.error('Error updating plot element:', error);
+    if (error.code === 'P2025') {
+      return res.status(404).json({ error: 'Plot element not found' });
+    }
+    res.status(500).json({ error: 'Failed to update plot element' });
+  }
+});
+
+// DELETE /api/plot-elements/:id - 删除情节元素
+router.delete('/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    // 检查是否有子元素
+    const childrenCount = await prisma.plotElement.count({
+      where: { parentId: id }
+    });
+    
+    if (childrenCount > 0) {
+      return res.status(400).json({ 
+        error: 'Cannot delete plot element with children. Please delete children first.' 
+      });
+    }
+    
+    await prisma.plotElement.delete({
+      where: { id }
+    });
+    
+    res.status(204).send();
+  } catch (error) {
+    console.error('Error deleting plot element:', error);
+    if (error.code === 'P2025') {
+      return res.status(404).json({ error: 'Plot element not found' });
+    }
+    res.status(500).json({ error: 'Failed to delete plot element' });
+  }
+});
+
+// POST /api/plot-elements/:id/characters - 关联角色到情节
+router.post('/:id/characters', async (req, res) => {
+  try {
+    const { id: plotElementId } = req.params;
+    const { characterId, role, importance } = req.body;
+    
+    if (!characterId) {
+      return res.status(400).json({ error: 'Missing required field: characterId' });
+    }
+    
+    const relation = await prisma.plotElementCharacter.create({
+      data: {
+        plotElementId,
+        characterId,
+        role: role || null,
+        importance: importance || 5
+      },
+      include: {
+        character: {
+          select: { id: true, name: true, role: true }
+        }
+      }
+    });
+    
+    res.status(201).json(relation);
+  } catch (error) {
+    console.error('Error linking character to plot element:', error);
+    if (error.code === 'P2002') {
+      return res.status(400).json({ error: 'Character already linked to this plot element' });
+    }
+    res.status(500).json({ error: 'Failed to link character' });
+  }
+});
+
+// DELETE /api/plot-elements/:id/characters/:characterId - 取消角色关联
+router.delete('/:id/characters/:characterId', async (req, res) => {
+  try {
+    const { id: plotElementId, characterId } = req.params;
+    
+    await prisma.plotElementCharacter.delete({
+      where: {
+        plotElementId_characterId: {
+          plotElementId,
+          characterId
+        }
+      }
+    });
+    
+    res.status(204).send();
+  } catch (error) {
+    console.error('Error unlinking character from plot element:', error);
+    if (error.code === 'P2025') {
+      return res.status(404).json({ error: 'Character relation not found' });
+    }
+    res.status(500).json({ error: 'Failed to unlink character' });
+  }
+});
+
+// POST /api/plot-elements/:id/settings - 关联设定到情节
+router.post('/:id/settings', async (req, res) => {
+  try {
+    const { id: plotElementId } = req.params;
+    const { settingId, relevance } = req.body;
+    
+    if (!settingId) {
+      return res.status(400).json({ error: 'Missing required field: settingId' });
+    }
+    
+    const relation = await prisma.plotElementSetting.create({
+      data: {
+        plotElementId,
+        settingId,
+        relevance: relevance || null
+      },
+      include: {
+        setting: {
+          select: { id: true, title: true, category: true }
+        }
+      }
+    });
+    
+    res.status(201).json(relation);
+  } catch (error) {
+    console.error('Error linking setting to plot element:', error);
+    if (error.code === 'P2002') {
+      return res.status(400).json({ error: 'Setting already linked to this plot element' });
+    }
+    res.status(500).json({ error: 'Failed to link setting' });
+  }
+});
+
+// DELETE /api/plot-elements/:id/settings/:settingId - 取消设定关联
+router.delete('/:id/settings/:settingId', async (req, res) => {
+  try {
+    const { id: plotElementId, settingId } = req.params;
+    
+    await prisma.plotElementSetting.delete({
+      where: {
+        plotElementId_settingId: {
+          plotElementId,
+          settingId
+        }
+      }
+    });
+    
+    res.status(204).send();
+  } catch (error) {
+    console.error('Error unlinking setting from plot element:', error);
+    if (error.code === 'P2025') {
+      return res.status(404).json({ error: 'Setting relation not found' });
+    }
+    res.status(500).json({ error: 'Failed to unlink setting' });
+  }
+});
+
+export default router;
