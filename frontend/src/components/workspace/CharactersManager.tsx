@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { Plus, Search, Edit, Trash2, User } from 'lucide-react';
 import type { Character, CreateCharacterData, UpdateCharacterData } from '../../types';
 import { charactersApi } from '../../services/api';
-import { CreateCharacterModal } from '../CreateCharacterModal';
 import { EditCharacterModal } from '../EditCharacterModal';
 import { CharacterDetail } from '../CharacterDetail';
 import { useTheme } from '../../contexts/ThemeContext';
@@ -17,7 +16,6 @@ export const CharactersManager: React.FC<CharactersManagerProps> = ({ projectId 
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedRole, setSelectedRole] = useState<string>('all');
-  const [showCreateModal, setShowCreateModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [editingCharacter, setEditingCharacter] = useState<Character | null>(null);
   const [selectedCharacterId, setSelectedCharacterId] = useState<string | null>(null);
@@ -39,12 +37,21 @@ export const CharactersManager: React.FC<CharactersManagerProps> = ({ projectId 
     }
   };
 
-  const handleCreateCharacter = async (data: CreateCharacterData) => {
+  const handleSaveCharacter = async (id: string, data: UpdateCharacterData) => {
     try {
-      const newCharacter = await charactersApi.create(data);
-      setCharacters(prev => [newCharacter, ...prev]);
+      if (editingCharacter) {
+        // 更新现有角色
+        const updatedCharacter = await charactersApi.update(id, data);
+        setCharacters(prev => prev.map(char => 
+          char.id === id ? updatedCharacter : char
+        ));
+      } else {
+        // 创建新角色
+        const newCharacter = await charactersApi.create(data as CreateCharacterData);
+        setCharacters(prev => [newCharacter, ...prev]);
+      }
     } catch (error) {
-      console.error('Error creating character:', error);
+      console.error('Error saving character:', error);
       throw error;
     }
   };
@@ -54,15 +61,7 @@ export const CharactersManager: React.FC<CharactersManagerProps> = ({ projectId 
     setShowEditModal(true);
   };
 
-  const handleUpdateCharacter = async (id: string, data: UpdateCharacterData) => {
-    try {
-      const updatedCharacter = await charactersApi.update(id, data);
-      setCharacters(prev => prev.map(c => c.id === id ? updatedCharacter : c));
-    } catch (error) {
-      console.error('Error updating character:', error);
-      throw error;
-    }
-  };
+
 
   const handleDeleteCharacter = async (id: string, name: string) => {
     if (!confirm(`确定要删除角色"${name}"吗？此操作无法撤销。`)) {
@@ -152,7 +151,10 @@ export const CharactersManager: React.FC<CharactersManagerProps> = ({ projectId 
           <p className="text-gray-600 dark:text-gray-400">管理小说中的所有角色</p>
         </div>
         <button
-          onClick={() => setShowCreateModal(true)}
+          onClick={() => {
+                setEditingCharacter(null);
+                setShowEditModal(true);
+              }}
           className="flex items-center space-x-2 px-4 py-2 bg-black text-white hover:bg-gray-800 dark:bg-white dark:text-black dark:hover:bg-gray-200 rounded-md transition-colors"
         >
           <Plus className="w-4 h-4" />
@@ -204,7 +206,10 @@ export const CharactersManager: React.FC<CharactersManagerProps> = ({ projectId 
           </p>
           {characters.length === 0 && (
             <button
-              onClick={() => setShowCreateModal(true)}
+              onClick={() => {
+              setEditingCharacter(null);
+              setShowEditModal(true);
+            }}
               className="px-4 py-2 bg-black text-white hover:bg-gray-800 dark:bg-white dark:text-black dark:hover:bg-gray-200 rounded-md transition-colors"
             >
               创建角色
@@ -268,21 +273,14 @@ export const CharactersManager: React.FC<CharactersManagerProps> = ({ projectId 
         </div>
       )}
 
-      {/* Modals */}
-      <CreateCharacterModal
-        isOpen={showCreateModal}
-        onClose={() => setShowCreateModal(false)}
-        onSubmit={handleCreateCharacter}
-        projectId={projectId}
-      />
-
+      {/* Modal */}
       <EditCharacterModal
         isOpen={showEditModal}
         onClose={() => {
           setShowEditModal(false);
           setEditingCharacter(null);
         }}
-        onSubmit={handleUpdateCharacter}
+        onSubmit={handleSaveCharacter}
         character={editingCharacter}
       />
     </div>
