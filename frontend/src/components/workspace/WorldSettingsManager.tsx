@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { Plus, Search, Edit, Trash2, Globe } from 'lucide-react';
-import type { WorldSetting } from '../../types';
+import type { WorldSetting, CreateWorldSettingData, UpdateWorldSettingData } from '../../types';
 import { worldSettingsApi } from '../../services/api';
+import { EditWorldSettingModal } from '../EditWorldSettingModal';
 
 interface WorldSettingsManagerProps {
   projectId: string;
@@ -22,7 +23,8 @@ export const WorldSettingsManager: React.FC<WorldSettingsManagerProps> = ({ proj
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
-  const [, setShowCreateModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [editingSetting, setEditingSetting] = useState<WorldSetting | undefined>();
 
   useEffect(() => {
     loadSettings();
@@ -37,6 +39,46 @@ export const WorldSettingsManager: React.FC<WorldSettingsManagerProps> = ({ proj
       console.error('Error loading world settings:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleCreateSetting = () => {
+    setEditingSetting(undefined);
+    setShowEditModal(true);
+  };
+
+  const handleEditSetting = (setting: WorldSetting) => {
+    setEditingSetting(setting);
+    setShowEditModal(true);
+  };
+
+  const handleSaveSetting = async (data: CreateWorldSettingData | UpdateWorldSettingData) => {
+    try {
+      if (editingSetting) {
+        // 更新现有设定
+        const updatedSetting = await worldSettingsApi.update(editingSetting.id, data as UpdateWorldSettingData);
+        setSettings(prev => prev.map(s => s.id === editingSetting.id ? updatedSetting : s));
+      } else {
+        // 创建新设定
+        const newSetting = await worldSettingsApi.create(data as CreateWorldSettingData);
+        setSettings(prev => [...prev, newSetting]);
+      }
+    } catch (error) {
+      console.error('Error saving world setting:', error);
+      throw error;
+    }
+  };
+
+  const handleDeleteSetting = async (setting: WorldSetting) => {
+    if (!confirm(`确定要删除设定"${setting.title}"吗？此操作不可撤销。`)) {
+      return;
+    }
+
+    try {
+      await worldSettingsApi.delete(setting.id);
+      setSettings(prev => prev.filter(s => s.id !== setting.id));
+    } catch (error) {
+      console.error('Error deleting world setting:', error);
     }
   };
 
@@ -72,7 +114,7 @@ export const WorldSettingsManager: React.FC<WorldSettingsManagerProps> = ({ proj
           <p className="text-gray-600">构建你的小说世界观</p>
         </div>
         <button
-          onClick={() => setShowCreateModal(true)}
+          onClick={handleCreateSetting}
           className="flex items-center space-x-2 px-4 py-2 bg-black text-white rounded-md hover:bg-gray-800 transition-colors"
         >
           <Plus className="w-4 h-4" />
@@ -123,7 +165,7 @@ export const WorldSettingsManager: React.FC<WorldSettingsManagerProps> = ({ proj
           </p>
           {settings.length === 0 && (
             <button
-              onClick={() => setShowCreateModal(true)}
+              onClick={handleCreateSetting}
               className="px-4 py-2 bg-black text-white rounded-md hover:bg-gray-800 transition-colors"
             >
               创建设定
@@ -152,10 +194,18 @@ export const WorldSettingsManager: React.FC<WorldSettingsManagerProps> = ({ proj
                     <div className="flex items-start justify-between mb-3">
                       <h4 className="text-lg font-medium text-gray-900">{setting.title}</h4>
                       <div className="flex items-center space-x-1">
-                        <button className="p-1 text-gray-400 hover:text-gray-600 transition-colors">
+                        <button 
+                          onClick={() => handleEditSetting(setting)}
+                          className="p-1 text-gray-400 hover:text-gray-600 transition-colors"
+                          title="编辑设定"
+                        >
                           <Edit className="w-4 h-4" />
                         </button>
-                        <button className="p-1 text-gray-400 hover:text-red-600 transition-colors">
+                        <button 
+                          onClick={() => handleDeleteSetting(setting)}
+                          className="p-1 text-gray-400 hover:text-red-600 transition-colors"
+                          title="删除设定"
+                        >
                           <Trash2 className="w-4 h-4" />
                         </button>
                       </div>
@@ -173,6 +223,15 @@ export const WorldSettingsManager: React.FC<WorldSettingsManagerProps> = ({ proj
           ))}
         </div>
       )}
+
+      {/* 编辑模态框 */}
+      <EditWorldSettingModal
+        isOpen={showEditModal}
+        onClose={() => setShowEditModal(false)}
+        onSave={handleSaveSetting}
+        setting={editingSetting}
+        projectId={projectId}
+      />
     </div>
   );
 };
