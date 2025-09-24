@@ -141,24 +141,23 @@ export const PlotElementsManager: React.FC<PlotElementsManagerProps> = ({ projec
   const handleCreateElement = async (type: string, parentElement?: PlotElement) => {
     const loadingKey = `${type}-${parentElement?.id || 'root'}`;
     
-    try {
-      // 添加loading状态
-      setCreatingElements(prev => new Set(prev).add(loadingKey));
-      
-      const defaultTitle = getDefaultTitle();
-      
-      // 在简化视图中创建章节时，需要找到默认的卷作为父元素
-      let actualParentId = parentElement?.id;
-      if (project.plotViewMode === 'simplified' && type === 'chapter' && !parentElement) {
-        // 查找默认的卷（part）
-        const defaultPart = plotElements.find(el => el.type === 'part');
-        if (defaultPart) {
-          actualParentId = defaultPart.id;
-        }
+    // 添加loading状态
+    setCreatingElements(prev => new Set(prev).add(loadingKey));
+    
+    const defaultTitle = getDefaultTitle();
+    
+    // 在简化视图中创建章节时，需要找到默认的卷作为父元素
+    let actualParentId = parentElement?.id;
+    if (project.plotViewMode === 'simplified' && type === 'chapter' && !parentElement) {
+      // 查找默认的卷（part）
+      const defaultPart = plotElements.find(el => el.type === 'part');
+      if (defaultPart) {
+        actualParentId = defaultPart.id;
       }
-      
-      // 乐观更新：立即添加临时元素到列表
-      const tempElement: PlotElement = {
+    }
+    
+    // 乐观更新：立即添加临时元素到列表
+    const tempElement: PlotElement = {
         id: `temp-${Date.now()}`,
         projectId: project.id,
         title: defaultTitle,
@@ -186,31 +185,34 @@ export const PlotElementsManager: React.FC<PlotElementsManagerProps> = ({ projec
         setExpandedItems(prev => new Set(prev).add(parentElement.id));
       }
       
-      // 实际创建元素
-      await plotElementsApi.create({
-        projectId: project.id,
-        title: defaultTitle,
-        type: type as any,
-        parentId: actualParentId,
-        status: 'planned',
-        autoCreateChildren: true
-      });
-      
-      // 创建成功后重新加载数据
-      await loadPlotElements();
-    } catch (error) {
-      console.error('Error creating plot element:', error);
-      alert('创建失败，请稍后重试');
-      // 失败时重新加载数据以移除临时元素
-      await loadPlotElements();
-    } finally {
-      // 移除loading状态
-      setCreatingElements(prev => {
-        const newSet = new Set(prev);
-        newSet.delete(loadingKey);
-        return newSet;
-      });
-    }
+      try {
+        // 实际创建元素
+        const newElement = await plotElementsApi.create({
+          projectId: project.id,
+          title: defaultTitle,
+          type: type as any,
+          parentId: actualParentId,
+          status: 'planned',
+          autoCreateChildren: true
+        });
+        
+        // 乐观更新：用真实数据替换临时元素
+        setPlotElements(prev => prev.map(el => 
+          el.id === tempElement.id ? newElement : el
+        ));
+      } catch (error) {
+        console.error('Error creating plot element:', error);
+        alert('创建失败，请稍后重试');
+        // 失败时移除临时元素
+        setPlotElements(prev => prev.filter(el => el.id !== tempElement.id));
+      } finally {
+        // 移除loading状态
+        setCreatingElements(prev => {
+          const newSet = new Set(prev);
+          newSet.delete(loadingKey);
+          return newSet;
+        });
+      }
   };
 
   // 获取下一个排序号
@@ -231,12 +233,35 @@ export const PlotElementsManager: React.FC<PlotElementsManagerProps> = ({ projec
       return;
     }
 
+    // 保存原始数据以便回滚
+    const originalElements = [...plotElements];
+    
+    // 乐观更新：立即从UI中移除元素及其所有子元素
+    const removeElementAndChildren = (elements: PlotElement[], targetId: string): PlotElement[] => {
+      return elements.filter(el => {
+        if (el.id === targetId) return false;
+        if (el.parentId === targetId) return false;
+        // 递归检查是否是要删除元素的后代
+        const isDescendant = (parentId: string | undefined): boolean => {
+          if (!parentId) return false;
+          if (parentId === targetId) return true;
+          const parent = elements.find(p => p.id === parentId);
+          return parent ? isDescendant(parent.parentId) : false;
+        };
+        return !isDescendant(el.parentId);
+      });
+    };
+    
+    setPlotElements(prev => removeElementAndChildren(prev, element.id));
+
     try {
       await plotElementsApi.delete(element.id);
-      await loadPlotElements(); // 重新加载数据
+      // 删除成功，不需要额外操作，UI已经更新
     } catch (error) {
       console.error('Error deleting plot element:', error);
       alert('删除失败，请稍后重试');
+      // 失败时回滚到原始状态
+      setPlotElements(originalElements);
     }
   };
 
