@@ -222,7 +222,12 @@ export const PlotElementsManager: React.FC<PlotElementsManagerProps> = ({ projec
   };
 
   const handleDeleteElement = async (element: PlotElement) => {
-    if (!confirm(`确定要删除"${element.title}"吗？${element.children && element.children.length > 0 ? '请先删除所有子元素。' : ''}`)) {
+    const hasChildren = element.children && element.children.length > 0;
+    const confirmMessage = hasChildren 
+      ? `确定要删除"${element.title}"吗？\n\n⚠️ 注意：这将同时删除所有子元素（${element.children?.length}个），此操作不可撤销！`
+      : `确定要删除"${element.title}"吗？`;
+    
+    if (!confirm(confirmMessage)) {
       return;
     }
 

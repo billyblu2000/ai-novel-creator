@@ -256,19 +256,28 @@ router.delete('/:id', async (req, res) => {
   try {
     const { id } = req.params;
     
-    // 检查是否有子元素
-    const childrenCount = await prisma.plotElement.count({
-      where: { parentId: id }
-    });
-    
-    if (childrenCount > 0) {
-      return res.status(400).json({ 
-        error: 'Cannot delete plot element with children. Please delete children first.' 
-      });
-    }
-    
-    await prisma.plotElement.delete({
-      where: { id }
+    // 使用事务进行级联删除
+    await prisma.$transaction(async (tx) => {
+      // 递归删除所有子元素
+      const deleteElementAndChildren = async (elementId: string) => {
+        // 先找到所有直接子元素
+        const children = await tx.plotElement.findMany({
+          where: { parentId: elementId },
+          select: { id: true }
+        });
+        
+        // 递归删除每个子元素
+        for (const child of children) {
+          await deleteElementAndChildren(child.id);
+        }
+        
+        // 删除当前元素
+        await tx.plotElement.delete({
+          where: { id: elementId }
+        });
+      };
+      
+      await deleteElementAndChildren(id);
     });
     
     return res.status(204).send();
