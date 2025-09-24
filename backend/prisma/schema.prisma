@@ -22,7 +22,7 @@ model Project {
   
   // 项目设置
   plotViewMode String  @default("simplified") // simplified, complete
-  levelNames   Json    @default("{\"book\":\"书\",\"part\":\"部\",\"chapter\":\"章\",\"scene\":\"场景\"}") // 层级命名自定义
+  levelNames   Json    @default("{\"book\":\"书\",\"part\":\"卷\",\"chapter\":\"章\",\"scene\":\"场景\"}") // 层级命名自定义
   
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt

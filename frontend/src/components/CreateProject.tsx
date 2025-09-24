@@ -14,7 +14,7 @@ export const CreateProject: React.FC = () => {
     plotViewMode: 'simplified' as 'simplified' | 'complete',
     levelNames: {
       book: '书',
-      part: '部',
+      part: '卷',
       chapter: '章',
       scene: '场景'
     }

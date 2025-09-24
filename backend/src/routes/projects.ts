@@ -94,7 +94,7 @@ router.post('/', async (req, res) => {
       plotViewMode = 'simplified',
       levelNames = {
         book: '书',
-        part: '部', 
+        part: '卷', 
         chapter: '章',
         scene: '场景'
       }
@@ -122,7 +122,7 @@ router.post('/', async (req, res) => {
       const defaultBook = await tx.plotElement.create({
         data: {
           projectId: project.id,
-          title: `默认${levelNames.book}`,
+          title: '默认标题',
           type: 'book',
           order: 1,
           content: '',
@@ -133,7 +133,7 @@ router.post('/', async (req, res) => {
       const defaultPart = await tx.plotElement.create({
         data: {
           projectId: project.id,
-          title: `第一${levelNames.part}`,
+          title: '默认标题',
           type: 'part',
           order: 1,
           parentId: defaultBook.id,
@@ -145,7 +145,7 @@ router.post('/', async (req, res) => {
       await tx.plotElement.create({
         data: {
           projectId: project.id,
-          title: `第一${levelNames.chapter}`,
+          title: '默认标题',
           type: 'chapter',
           order: 1,
           parentId: defaultPart.id,

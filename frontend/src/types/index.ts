@@ -224,6 +224,7 @@ export interface CreatePlotElementData {
   mood?: string;
   pov?: string;
   order?: number;
+  autoCreateChildren?: boolean;
 }
 
 export interface UpdatePlotElementData {

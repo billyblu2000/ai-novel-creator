@@ -3,6 +3,23 @@ import { useNavigate } from 'react-router-dom';
 import { Plus, Search, Edit, Trash2, BookOpen, ChevronRight, ChevronDown, Expand, Minimize2, PenTool } from 'lucide-react';
 import type { PlotElement, Project } from '../../types';
 import { plotElementsApi } from '../../services/api';
+import { EditPlotElementModal } from '../EditPlotElementModal';
+import { DraggablePlotElement } from './DraggablePlotElement';
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+} from '@dnd-kit/core';
+import type { DragEndEvent } from '@dnd-kit/core';
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  verticalListSortingStrategy,
+} from '@dnd-kit/sortable';
 
 interface PlotElementsManagerProps {
   projectId: string;
@@ -16,7 +33,10 @@ export const PlotElementsManager: React.FC<PlotElementsManagerProps> = ({ projec
   const [expandedItems, setExpandedItems] = useState<Set<string>>(new Set());
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedType, setSelectedType] = useState<string>('all');
-  const [, setShowCreateModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [elementToEdit, setElementToEdit] = useState<PlotElement | null>(null);
+  const [creatingElements, setCreatingElements] = useState<Set<string>>(new Set());
+  const [isDragMode, setIsDragMode] = useState(false);
 
   useEffect(() => {
     loadPlotElements();
@@ -32,6 +52,16 @@ export const PlotElementsManager: React.FC<PlotElementsManagerProps> = ({ projec
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleEditElement = (element: PlotElement) => {
+    setElementToEdit(element);
+    setShowEditModal(true);
+  };
+
+  const handleEditSuccess = () => {
+    loadPlotElements(); // 重新加载数据
+    setElementToEdit(null);
   };
 
   const buildHierarchy = (elements: PlotElement[]): (PlotElement & { children: PlotElement[] })[] => {
@@ -107,6 +137,109 @@ export const PlotElementsManager: React.FC<PlotElementsManagerProps> = ({ projec
     setExpandedItems(new Set());
   };
 
+  // 直接创建元素，无弹窗
+  const handleCreateElement = async (type: string, parentElement?: PlotElement) => {
+    const loadingKey = `${type}-${parentElement?.id || 'root'}`;
+    
+    try {
+      // 添加loading状态
+      setCreatingElements(prev => new Set(prev).add(loadingKey));
+      
+      const defaultTitle = getDefaultTitle();
+      
+      // 在简化视图中创建章节时，需要找到默认的卷作为父元素
+      let actualParentId = parentElement?.id;
+      if (project.plotViewMode === 'simplified' && type === 'chapter' && !parentElement) {
+        // 查找默认的卷（part）
+        const defaultPart = plotElements.find(el => el.type === 'part');
+        if (defaultPart) {
+          actualParentId = defaultPart.id;
+        }
+      }
+      
+      // 乐观更新：立即添加临时元素到列表
+      const tempElement: PlotElement = {
+        id: `temp-${Date.now()}`,
+        projectId: project.id,
+        title: defaultTitle,
+        type: type as any,
+        order: getNextOrder(type, actualParentId),
+        parentId: actualParentId,
+        summary: undefined,
+        content: '',
+        notes: undefined,
+        status: 'planned',
+        wordCount: 0,
+        targetWords: undefined,
+        mood: undefined,
+        pov: undefined,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        children: []
+      };
+      
+      // 立即更新UI
+      setPlotElements(prev => [...prev, tempElement]);
+      
+      // 如果有父元素，自动展开它
+      if (parentElement) {
+        setExpandedItems(prev => new Set(prev).add(parentElement.id));
+      }
+      
+      // 实际创建元素
+      await plotElementsApi.create({
+        projectId: project.id,
+        title: defaultTitle,
+        type: type as any,
+        parentId: actualParentId,
+        status: 'planned',
+        autoCreateChildren: true
+      });
+      
+      // 创建成功后重新加载数据
+      await loadPlotElements();
+    } catch (error) {
+      console.error('Error creating plot element:', error);
+      alert('创建失败，请稍后重试');
+      // 失败时重新加载数据以移除临时元素
+      await loadPlotElements();
+    } finally {
+      // 移除loading状态
+      setCreatingElements(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(loadingKey);
+        return newSet;
+      });
+    }
+  };
+
+  // 获取下一个排序号
+  const getNextOrder = (type: string, parentId?: string) => {
+    const siblings = plotElements.filter(el => 
+      el.type === type && el.parentId === (parentId || null)
+    );
+    return siblings.length + 1;
+  };
+
+  const handleDeleteElement = async (element: PlotElement) => {
+    if (!confirm(`确定要删除"${element.title}"吗？${element.children && element.children.length > 0 ? '请先删除所有子元素。' : ''}`)) {
+      return;
+    }
+
+    try {
+      await plotElementsApi.delete(element.id);
+      await loadPlotElements(); // 重新加载数据
+    } catch (error) {
+      console.error('Error deleting plot element:', error);
+      alert('删除失败，请稍后重试');
+    }
+  };
+
+  // 生成默认标题（不包含顺序信息）
+  const getDefaultTitle = () => {
+    return '默认标题';
+  };
+
   const getTypeColor = (type: string) => {
     switch (type) {
       case 'book': return 'text-purple-600 bg-purple-100 dark:text-purple-400 dark:bg-purple-900';
@@ -147,6 +280,119 @@ export const PlotElementsManager: React.FC<PlotElementsManagerProps> = ({ projec
       case 'drafted': return '草稿';
       case 'completed': return '已完成';
       default: return status;
+    }
+  };
+
+  const getChildTypeLabel = (parentType: string) => {
+    switch (parentType) {
+      case 'book': return project.levelNames.part;
+      case 'part': return project.levelNames.chapter;
+      case 'chapter': return project.levelNames.scene;
+      case 'scene': return '节拍';
+      default: return '子元素';
+    }
+  };
+
+  const getChildType = (parentType: string) => {
+    switch (parentType) {
+      case 'book': return 'part';
+      case 'part': return 'chapter';
+      case 'chapter': return 'scene';
+      case 'scene': return 'beat';
+      default: return null;
+    }
+  };
+
+  // 生成带顺序的显示标题
+  const getDisplayTitle = (element: PlotElement) => {
+    let typeLabel = '';
+    switch (element.type) {
+      case 'book': 
+        typeLabel = '书';
+        break;
+      case 'part': 
+        typeLabel = '卷';
+        break;
+      case 'chapter': 
+        typeLabel = '章节';
+        break;
+      case 'scene': 
+        typeLabel = '场景';
+        break;
+      case 'beat': 
+        typeLabel = '节拍';
+        break;
+      default: 
+        typeLabel = element.type;
+    }
+    return `${typeLabel}#${element.order}: 「${element.title}」`;
+  };
+
+  // 拖拽传感器
+  const sensors = useSensors(
+    useSensor(PointerSensor),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
+
+  // 处理拖拽结束
+  const handleDragEnd = async (event: DragEndEvent) => {
+    const { active, over } = event;
+
+    if (!over || active.id === over.id) {
+      return;
+    }
+
+    const activeElement = plotElements.find(el => el.id === active.id);
+    const overElement = plotElements.find(el => el.id === over.id);
+
+    if (!activeElement || !overElement) {
+      return;
+    }
+
+    // 只允许同级元素之间拖拽
+    if (activeElement.parentId !== overElement.parentId) {
+      return;
+    }
+
+    // 获取同级元素
+    const siblings = plotElements.filter(el => 
+      el.parentId === activeElement.parentId && el.type === activeElement.type
+    ).sort((a, b) => a.order - b.order);
+
+    const oldIndex = siblings.findIndex(el => el.id === active.id);
+    const newIndex = siblings.findIndex(el => el.id === over.id);
+
+    if (oldIndex === -1 || newIndex === -1) {
+      return;
+    }
+
+    // 乐观更新：立即更新UI
+    const newSiblings = arrayMove(siblings, oldIndex, newIndex);
+    const updatedElements = plotElements.map(el => {
+      const newSibling = newSiblings.find(s => s.id === el.id);
+      if (newSibling) {
+        const newOrder = newSiblings.indexOf(newSibling) + 1;
+        return { ...el, order: newOrder };
+      }
+      return el;
+    });
+
+    setPlotElements(updatedElements);
+
+    // 后台更新顺序
+    try {
+      // 批量更新所有受影响元素的顺序
+      const updatePromises = newSiblings.map((element, index) => 
+        plotElementsApi.update(element.id, { order: index + 1 })
+      );
+      
+      await Promise.all(updatePromises);
+    } catch (error) {
+      console.error('Error updating element order:', error);
+      // 失败时重新加载数据
+      await loadPlotElements();
     }
   };
 
@@ -204,10 +450,9 @@ export const PlotElementsManager: React.FC<PlotElementsManagerProps> = ({ projec
       }
     };
 
-    return (
-      <div key={element.id} className="mb-3">
-        <div className={`${getLevelStyles(level, isSimplified)} ${getImportanceBackground(1)}`}>
-          <div className="flex items-start justify-between">
+    const elementContent = (
+      <div className={`${getLevelStyles(level, isSimplified)} ${getImportanceBackground(1)}`}>
+        <div className="flex items-start justify-between">
             <div className="flex items-start space-x-3 flex-1">
               <div className="flex items-center space-x-2">
                 {hasChildren && (
@@ -228,7 +473,7 @@ export const PlotElementsManager: React.FC<PlotElementsManagerProps> = ({ projec
               <div className="flex-1">
                 <div className="flex items-center space-x-3 mb-2">
                   <h3 className={`font-semibold text-gray-900 dark:text-white ${level === 0 ? 'text-xl' : level === 1 ? 'text-lg' : 'text-base'}`}>
-                    {element.title}
+                    {getDisplayTitle(element)}
                   </h3>
                   <span className={`px-2 py-1 rounded-full text-xs font-medium ${getTypeColor(element.type)}`}>
                     {getTypeText(element.type)}
@@ -262,31 +507,121 @@ export const PlotElementsManager: React.FC<PlotElementsManagerProps> = ({ projec
             </div>
             
             <div className="flex items-center space-x-1">
+              {/* 添加子元素按钮 */}
+              {(() => {
+                // 简化视图逻辑
+                if (project.plotViewMode === 'simplified') {
+                  if (element.type === 'chapter') {
+                    const loadingKey = `scene-${element.id}`;
+                    const isLoading = creatingElements.has(loadingKey);
+                    return (
+                      <button 
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleCreateElement('scene', element);
+                        }}
+                        disabled={isLoading}
+                        className="p-1 text-gray-400 dark:text-gray-500 hover:text-green-600 dark:hover:text-green-400 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                        title={`添加${project.levelNames.scene}`}
+                      >
+                        {isLoading ? (
+                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-green-600"></div>
+                        ) : (
+                          <Plus className="w-4 h-4" />
+                        )}
+                      </button>
+                    );
+                  }
+                  return null;
+                }
+                
+                // 完整视图逻辑
+                if (element.type !== 'scene' && element.type !== 'beat') {
+                  const childType = getChildType(element.type);
+                  if (childType) {
+                    const loadingKey = `${childType}-${element.id}`;
+                    const isLoading = creatingElements.has(loadingKey);
+                    return (
+                      <button 
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleCreateElement(childType, element);
+                        }}
+                        disabled={isLoading}
+                        className="p-1 text-gray-400 dark:text-gray-500 hover:text-green-600 dark:hover:text-green-400 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                        title={`添加${getChildTypeLabel(element.type)}`}
+                      >
+                        {isLoading ? (
+                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-green-600"></div>
+                        ) : (
+                          <Plus className="w-4 h-4" />
+                        )}
+                      </button>
+                    );
+                  }
+                }
+                return null;
+              })()}
+              
+              {/* 编辑内容按钮 */}
               {(element.type === 'chapter' || element.type === 'scene') && (
                 <button 
-                  onClick={() => navigate(`/project/${projectId}/edit/${element.id}`)}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    navigate(`/project/${projectId}/edit/${element.id}`);
+                  }}
                   className="p-1 text-gray-400 dark:text-gray-500 hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
                   title="编辑内容"
                 >
                   <PenTool className="w-4 h-4" />
                 </button>
               )}
-              <button className="p-1 text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 transition-colors">
+              
+              {/* 编辑属性按钮 */}
+              <button 
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleEditElement(element);
+                }}
+                className="p-1 text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
+                title="编辑属性"
+              >
                 <Edit className="w-4 h-4" />
               </button>
-              <button className="p-1 text-gray-400 dark:text-gray-500 hover:text-red-600 dark:hover:text-red-400 transition-colors">
+              
+              {/* 删除按钮 */}
+              <button 
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleDeleteElement(element);
+                }}
+                className="p-1 text-gray-400 dark:text-gray-500 hover:text-red-600 dark:hover:text-red-400 transition-colors"
+                title="删除"
+              >
                 <Trash2 className="w-4 h-4" />
               </button>
             </div>
           </div>
         </div>
+    );
+
+    return (
+      <div key={element.id} className="mb-3">
+        <DraggablePlotElement element={element} isDragMode={isDragMode}>
+          {elementContent}
+        </DraggablePlotElement>
         
         {hasChildren && isExpanded && (
-          <div className="mt-4 space-y-3">
-            {element.children!.map((child) => 
-              renderPlotElement(child, level + 1, isSimplified)
-            )}
-          </div>
+          <SortableContext 
+            items={element.children!.map(child => child.id)}
+            strategy={verticalListSortingStrategy}
+          >
+            <div className="mt-4 space-y-3">
+              {element.children!.map((child) => 
+                renderPlotElement(child, level + 1, isSimplified)
+              )}
+            </div>
+          </SortableContext>
         )}
       </div>
     );
@@ -322,18 +657,46 @@ export const PlotElementsManager: React.FC<PlotElementsManagerProps> = ({ projec
             </div>
           )}
         </div>
-        <button
-          onClick={() => setShowCreateModal(true)}
-          className="flex items-center space-x-2 px-4 py-2 bg-black dark:bg-white text-white dark:text-black rounded-md hover:bg-gray-800 dark:hover:bg-gray-200 transition-colors"
-        >
-          <Plus className="w-4 h-4" />
-          <span>
-            {project.plotViewMode === 'simplified' 
-              ? `添加${project.levelNames.chapter}` 
-              : '添加情节'
-            }
-          </span>
-        </button>
+        <div className="flex items-center space-x-3">
+          {/* 拖拽模式切换开关 */}
+          <button
+            onClick={() => setIsDragMode(!isDragMode)}
+            className={`flex items-center space-x-2 px-3 py-2 rounded-md transition-colors ${
+              isDragMode 
+                ? 'bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300' 
+                : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
+            }`}
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4" />
+            </svg>
+            <span className="text-sm">{isDragMode ? '拖拽模式' : '调整顺序'}</span>
+          </button>
+          
+          <button
+            onClick={() => {
+              if (project.plotViewMode === 'simplified') {
+                handleCreateElement('chapter');
+              } else {
+                handleCreateElement('book');
+              }
+            }}
+            disabled={creatingElements.has(project.plotViewMode === 'simplified' ? 'chapter-root' : 'book-root')}
+            className="flex items-center space-x-2 px-4 py-2 bg-black dark:bg-white text-white dark:text-black rounded-md hover:bg-gray-800 dark:hover:bg-gray-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {creatingElements.has(project.plotViewMode === 'simplified' ? 'chapter-root' : 'book-root') ? (
+              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white dark:border-black"></div>
+            ) : (
+              <Plus className="w-4 h-4" />
+            )}
+            <span>
+              {project.plotViewMode === 'simplified' 
+                ? `新建${project.levelNames.chapter}` 
+                : `新建${project.levelNames.book}`
+              }
+            </span>
+          </button>
+        </div>
       </div>
 
       {/* Filters and Controls */}
@@ -412,7 +775,13 @@ export const PlotElementsManager: React.FC<PlotElementsManagerProps> = ({ projec
             }
           </p>
           <button
-            onClick={() => setShowCreateModal(true)}
+            onClick={() => {
+              if (project.plotViewMode === 'simplified') {
+                handleCreateElement('chapter');
+              } else {
+                handleCreateElement('book');
+              }
+            }}
             className="px-4 py-2 bg-black dark:bg-white text-white dark:text-black rounded-md hover:bg-gray-800 dark:hover:bg-gray-200 transition-colors"
           >
             {project.plotViewMode === 'simplified' 
@@ -421,6 +790,23 @@ export const PlotElementsManager: React.FC<PlotElementsManagerProps> = ({ projec
             }
           </button>
         </div>
+      ) : isDragMode ? (
+        <DndContext
+          sensors={sensors}
+          collisionDetection={closestCenter}
+          onDragEnd={handleDragEnd}
+        >
+          <SortableContext 
+            items={hierarchicalElements.map(element => element.id)}
+            strategy={verticalListSortingStrategy}
+          >
+            <div className="space-y-4">
+              {hierarchicalElements.map((element) => 
+                renderPlotElement(element, 0, project.plotViewMode === 'simplified')
+              )}
+            </div>
+          </SortableContext>
+        </DndContext>
       ) : (
         <div className="space-y-4">
           {hierarchicalElements.map((element) => 
@@ -428,6 +814,18 @@ export const PlotElementsManager: React.FC<PlotElementsManagerProps> = ({ projec
           )}
         </div>
       )}
+
+      {/* 编辑情节元素Modal */}
+      <EditPlotElementModal
+        isOpen={showEditModal}
+        onClose={() => {
+          setShowEditModal(false);
+          setElementToEdit(null);
+        }}
+        onSuccess={handleEditSuccess}
+        project={project}
+        element={elementToEdit}
+      />
     </div>
   );
 };

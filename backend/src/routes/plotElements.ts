@@ -112,7 +112,7 @@ router.post('/', async (req, res) => {
   try {
     const { 
       projectId, title, type, parentId, summary, content, notes,
-      status, targetWords, mood, pov, order 
+      status, targetWords, mood, pov, order, autoCreateChildren 
     } = req.body;
     
     if (!projectId || !title || !type) {
@@ -132,35 +132,75 @@ router.post('/', async (req, res) => {
       elementOrder = (maxOrder?.order || 0) + 1;
     }
     
-    const plotElement = await prisma.plotElement.create({
-      data: {
-        projectId,
-        title: title.trim(),
-        type,
-        order: elementOrder,
-        parentId: parentId || null,
-        summary: summary || null,
-        content: content || '',
-        notes: notes || null,
-        status: status || 'planned',
-        targetWords: targetWords || null,
-        mood: mood || null,
-        pov: pov || null,
-        wordCount: content ? content.length : 0
-      },
-      include: {
-        parent: {
-          select: { id: true, title: true, type: true }
+    // 使用事务创建元素和可能的子元素
+    const result = await prisma.$transaction(async (tx) => {
+      const plotElement = await tx.plotElement.create({
+        data: {
+          projectId,
+          title: title.trim(),
+          type,
+          order: elementOrder,
+          parentId: parentId || null,
+          summary: summary || null,
+          content: content || '',
+          notes: notes || null,
+          status: status || 'planned',
+          targetWords: targetWords || null,
+          mood: mood || null,
+          pov: pov || null,
+          wordCount: content ? content.length : 0
+        },
+        include: {
+          parent: {
+            select: { id: true, title: true, type: true }
+          }
+        }
+      });
+
+      // 自动创建下级元素（除了章节和场景）
+      if (autoCreateChildren && type !== 'chapter' && type !== 'scene' && type !== 'beat') {
+        const childType = getChildType(type);
+        if (childType) {
+          const childTitle = getDefaultChildTitle(type, title);
+          await tx.plotElement.create({
+            data: {
+              projectId,
+              title: childTitle,
+              type: childType,
+              order: 1,
+              parentId: plotElement.id,
+              content: '',
+              status: 'planned',
+              wordCount: 0
+            }
+          });
         }
       }
+
+      return plotElement;
     });
     
-    return res.status(201).json(plotElement);
+    return res.status(201).json(result);
   } catch (error: any) {
     console.error('Error creating plot element:', error);
     return res.status(500).json({ error: 'Failed to create plot element' });
   }
 });
+
+// 辅助函数：获取子元素类型
+function getChildType(parentType: string): string | null {
+  switch (parentType) {
+    case 'book': return 'part';
+    case 'part': return 'chapter';
+    case 'chapter': return 'scene';
+    default: return null;
+  }
+}
+
+// 辅助函数：生成默认子元素标题
+function getDefaultChildTitle(parentType: string, parentTitle: string): string {
+  return '默认标题';
+}
 
 // PUT /api/plot-elements/:id - 更新情节元素
 router.put('/:id', async (req, res) => {

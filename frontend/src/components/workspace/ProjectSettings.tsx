@@ -20,6 +20,15 @@ export const ProjectSettings: React.FC<ProjectSettingsProps> = ({ project, onPro
   });
   const [saving, setSaving] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  
+  // 检查是否有多个卷，如果有则不允许切换到简化视图
+  const hasMultipleParts = () => {
+    if (!project.plotElements) return false;
+    const parts = project.plotElements.filter(el => el.type === 'part');
+    return parts.length >= 2;
+  };
+  
+  const canSwitchToSimplified = !hasMultipleParts();
 
   const handleInputChange = (field: string, value: string | number) => {
     setFormData(prev => ({
@@ -208,18 +217,26 @@ export const ProjectSettings: React.FC<ProjectSettingsProps> = ({ project, onPro
               情节视图模式
             </label>
             <div className="space-y-3">
-              <label className="flex items-start space-x-3 cursor-pointer">
+              <label className={`flex items-start space-x-3 ${canSwitchToSimplified ? 'cursor-pointer' : 'cursor-not-allowed opacity-50'}`}>
                 <input
                   type="radio"
                   name="plotViewMode"
                   value="simplified"
                   checked={formData.plotViewMode === 'simplified'}
-                  onChange={(e) => handleInputChange('plotViewMode', e.target.value)}
+                  onChange={(e) => canSwitchToSimplified && handleInputChange('plotViewMode', e.target.value)}
+                  disabled={!canSwitchToSimplified}
                   className="mt-1"
                 />
                 <div>
                   <div className="text-sm font-medium text-gray-900 dark:text-white">简化视图</div>
-                  <div className="text-xs text-gray-500 dark:text-gray-400">只显示章节层级，适合大多数创作者</div>
+                  <div className="text-xs text-gray-500 dark:text-gray-400">
+                    只显示章节层级，适合大多数创作者
+                    {!canSwitchToSimplified && (
+                      <div className="text-red-500 dark:text-red-400 mt-1">
+                        ⚠️ 项目包含多个卷，无法切换到简化视图
+                      </div>
+                    )}
+                  </div>
                 </div>
               </label>
               <label className="flex items-start space-x-3 cursor-pointer">
