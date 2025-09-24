@@ -23,9 +23,7 @@ export const EditPlotElementModal: React.FC<EditPlotElementModalProps> = ({
     summary: '',
     notes: '',
     status: 'planned' as 'completed' | 'planned' | 'outlined' | 'drafted',
-    targetWords: '',
-    mood: '',
-    pov: ''
+    targetWords: ''
   });
   const [loading, setLoading] = useState(false);
 
@@ -37,9 +35,7 @@ export const EditPlotElementModal: React.FC<EditPlotElementModalProps> = ({
         summary: element.summary || '',
         notes: element.notes || '',
         status: element.status || 'planned',
-        targetWords: element.targetWords?.toString() || '',
-        mood: element.mood || '',
-        pov: element.pov || ''
+        targetWords: element.targetWords?.toString() || ''
       });
     }
   }, [element]);
@@ -66,9 +62,7 @@ export const EditPlotElementModal: React.FC<EditPlotElementModalProps> = ({
         summary: formData.summary || undefined,
         notes: formData.notes || undefined,
         status: formData.status,
-        targetWords: formData.targetWords ? parseInt(formData.targetWords) : undefined,
-        mood: formData.mood || undefined,
-        pov: formData.pov || undefined
+        targetWords: formData.targetWords ? parseInt(formData.targetWords) : undefined
       });
       
       onSuccess();
@@ -178,34 +172,7 @@ export const EditPlotElementModal: React.FC<EditPlotElementModalProps> = ({
             </div>
           </div>
 
-          {/* 基调和视角 */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                基调/氛围
-              </label>
-              <input
-                type="text"
-                value={formData.mood}
-                onChange={(e) => setFormData({ ...formData, mood: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:border-black dark:focus:border-white focus:border-2 transition-colors bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                placeholder="如：紧张、温馨、悲伤..."
-              />
-            </div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                视角
-              </label>
-              <input
-                type="text"
-                value={formData.pov}
-                onChange={(e) => setFormData({ ...formData, pov: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:border-black dark:focus:border-white focus:border-2 transition-colors bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                placeholder="如：第一人称、第三人称..."
-              />
-            </div>
-          </div>
 
           {/* 元素信息 */}
           <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4">

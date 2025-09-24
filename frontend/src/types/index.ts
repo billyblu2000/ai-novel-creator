@@ -71,8 +71,6 @@ export interface PlotElement {
   status: 'planned' | 'outlined' | 'drafted' | 'completed';
   wordCount: number;
   targetWords?: number;
-  mood?: string;
-  pov?: string;
   createdAt: string;
   updatedAt: string;
   // 关联数据
@@ -221,8 +219,6 @@ export interface CreatePlotElementData {
   notes?: string;
   status?: 'planned' | 'outlined' | 'drafted' | 'completed';
   targetWords?: number;
-  mood?: string;
-  pov?: string;
   order?: number;
   autoCreateChildren?: boolean;
 }

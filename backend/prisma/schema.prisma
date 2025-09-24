@@ -86,10 +86,6 @@ model PlotElement {
   wordCount   Int      @default(0)
   targetWords Int?     // 目标字数
   
-  // 创作元数据
-  mood        String?  // 情绪基调：tense, romantic, mysterious, etc.
-  pov         String?  // 视角：first_person, third_person, etc.
-  
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
   

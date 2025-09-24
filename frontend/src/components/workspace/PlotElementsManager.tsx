@@ -170,8 +170,7 @@ export const PlotElementsManager: React.FC<PlotElementsManagerProps> = ({ projec
         status: 'planned',
         wordCount: 0,
         targetWords: undefined,
-        mood: undefined,
-        pov: undefined,
+
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
         children: []
@@ -526,12 +525,7 @@ export const PlotElementsManager: React.FC<PlotElementsManagerProps> = ({ projec
                   {element.targetWords && (
                     <span>目标: {element.targetWords.toLocaleString()} 字</span>
                   )}
-                  {element.mood && (
-                    <span>基调: {element.mood}</span>
-                  )}
-                  {element.pov && (
-                    <span>视角: {element.pov}</span>
-                  )}
+
                 </div>
               </div>
             </div>

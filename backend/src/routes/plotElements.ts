@@ -112,7 +112,7 @@ router.post('/', async (req, res) => {
   try {
     const { 
       projectId, title, type, parentId, summary, content, notes,
-      status, targetWords, mood, pov, order, autoCreateChildren 
+      status, targetWords, order, autoCreateChildren 
     } = req.body;
     
     if (!projectId || !title || !type) {
@@ -146,8 +146,6 @@ router.post('/', async (req, res) => {
           notes: notes || null,
           status: status || 'planned',
           targetWords: targetWords || null,
-          mood: mood || null,
-          pov: pov || null,
           wordCount: content ? content.length : 0
         },
         include: {
@@ -208,7 +206,7 @@ router.put('/:id', async (req, res) => {
     const { id } = req.params;
     const { 
       title, type, order, parentId, summary, content, notes,
-      status, targetWords, mood, pov 
+      status, targetWords 
     } = req.body;
     
     const updateData: any = {};
@@ -224,8 +222,6 @@ router.put('/:id', async (req, res) => {
     if (notes !== undefined) updateData.notes = notes || null;
     if (status) updateData.status = status;
     if (targetWords !== undefined) updateData.targetWords = targetWords || null;
-    if (mood !== undefined) updateData.mood = mood || null;
-    if (pov !== undefined) updateData.pov = pov || null;
     
     const plotElement = await prisma.plotElement.update({
       where: { id },

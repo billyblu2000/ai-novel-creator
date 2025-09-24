@@ -88,8 +88,7 @@ export const ChapterEditor: React.FC = () => {
       setNotes(elementData.notes || '');
       setStatus(elementData.status);
       setTargetWords(elementData.targetWords);
-      setMood(elementData.mood || '');
-      setPov(elementData.pov || '');
+
     } catch (error) {
       console.error('Error loading data:', error);
     } finally {
