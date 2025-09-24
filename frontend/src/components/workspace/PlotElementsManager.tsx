@@ -1,13 +1,16 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Search, Edit, Trash2, BookOpen, ChevronRight, ChevronDown, Expand, Minimize2 } from 'lucide-react';
-import type { PlotElement } from '../../types';
+import { useNavigate } from 'react-router-dom';
+import { Plus, Search, Edit, Trash2, BookOpen, ChevronRight, ChevronDown, Expand, Minimize2, PenTool } from 'lucide-react';
+import type { PlotElement, Project } from '../../types';
 import { plotElementsApi } from '../../services/api';
 
 interface PlotElementsManagerProps {
   projectId: string;
+  project: Project;
 }
 
-export const PlotElementsManager: React.FC<PlotElementsManagerProps> = ({ projectId }) => {
+export const PlotElementsManager: React.FC<PlotElementsManagerProps> = ({ projectId, project }) => {
+  const navigate = useNavigate();
   const [plotElements, setPlotElements] = useState<PlotElement[]>([]);
   const [loading, setLoading] = useState(true);
   const [expandedItems, setExpandedItems] = useState<Set<string>>(new Set());
@@ -65,6 +68,17 @@ export const PlotElementsManager: React.FC<PlotElementsManagerProps> = ({ projec
     return rootElements;
   };
 
+  // 构建简化视图的层级结构
+  const buildSimplifiedHierarchy = (elements: PlotElement[]): (PlotElement & { children: PlotElement[] })[] => {
+    const chapters = elements.filter(el => el.type === 'chapter');
+    const scenes = elements.filter(el => el.type === 'scene');
+    
+    return chapters.map(chapter => ({
+      ...chapter,
+      children: scenes.filter(scene => scene.parentId === chapter.id).sort((a, b) => a.order - b.order)
+    })).sort((a, b) => a.order - b.order);
+  };
+
   const toggleExpanded = (id: string) => {
     const newExpanded = new Set(expandedItems);
     if (newExpanded.has(id)) {
@@ -95,21 +109,22 @@ export const PlotElementsManager: React.FC<PlotElementsManagerProps> = ({ projec
 
   const getTypeColor = (type: string) => {
     switch (type) {
-      case 'book': return 'text-purple-600 bg-purple-100';
-      case 'part': return 'text-blue-600 bg-blue-100';
-      case 'chapter': return 'text-green-600 bg-green-100';
-      case 'scene': return 'text-yellow-600 bg-yellow-100';
-      case 'beat': return 'text-gray-600 bg-gray-100';
-      default: return 'text-gray-600 bg-gray-100';
+      case 'book': return 'text-purple-600 bg-purple-100 dark:text-purple-400 dark:bg-purple-900';
+      case 'part': return 'text-blue-600 bg-blue-100 dark:text-blue-400 dark:bg-blue-900';
+      case 'chapter': return 'text-green-600 bg-green-100 dark:text-green-400 dark:bg-green-900';
+      case 'scene': return 'text-yellow-600 bg-yellow-100 dark:text-yellow-400 dark:bg-yellow-900';
+      case 'beat': return 'text-gray-600 bg-gray-100 dark:text-gray-400 dark:bg-gray-700';
+      default: return 'text-gray-600 bg-gray-100 dark:text-gray-400 dark:bg-gray-700';
     }
   };
 
   const getTypeText = (type: string) => {
+    const levelNames = project.levelNames;
     switch (type) {
-      case 'book': return '书';
-      case 'part': return '部';
-      case 'chapter': return '章';
-      case 'scene': return '场景';
+      case 'book': return levelNames.book;
+      case 'part': return levelNames.part;
+      case 'chapter': return levelNames.chapter;
+      case 'scene': return levelNames.scene;
       case 'beat': return '节拍';
       default: return type;
     }
@@ -117,11 +132,11 @@ export const PlotElementsManager: React.FC<PlotElementsManagerProps> = ({ projec
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'planned': return 'text-gray-600 bg-gray-100';
-      case 'outlined': return 'text-yellow-600 bg-yellow-100';
-      case 'drafted': return 'text-blue-600 bg-blue-100';
-      case 'completed': return 'text-green-600 bg-green-100';
-      default: return 'text-gray-600 bg-gray-100';
+      case 'planned': return 'text-gray-600 bg-gray-100 dark:text-gray-400 dark:bg-gray-700';
+      case 'outlined': return 'text-yellow-600 bg-yellow-100 dark:text-yellow-400 dark:bg-yellow-900';
+      case 'drafted': return 'text-blue-600 bg-blue-100 dark:text-blue-400 dark:bg-blue-900';
+      case 'completed': return 'text-green-600 bg-green-100 dark:text-green-400 dark:bg-green-900';
+      default: return 'text-gray-600 bg-gray-100 dark:text-gray-400 dark:bg-gray-700';
     }
   };
 
@@ -135,33 +150,46 @@ export const PlotElementsManager: React.FC<PlotElementsManagerProps> = ({ projec
     }
   };
 
-  const renderPlotElement = (element: PlotElement, level: number = 0) => {
+  const renderPlotElement = (element: PlotElement, level: number = 0, isSimplified: boolean = false) => {
     const hasChildren = element.children && element.children.length > 0;
     const isExpanded = expandedItems.has(element.id);
     
     // 根据重要程度确定背景色（保持原有系统）
     const getImportanceBackground = (importance: number = 5) => {
-      if (importance >= 8) return 'bg-gray-100';
-      if (importance >= 6) return 'bg-slate-50';
-      if (importance >= 4) return 'bg-gray-50';
-      return 'bg-white';
+      if (importance >= 8) return 'bg-gray-100 dark:bg-gray-800';
+      if (importance >= 6) return 'bg-slate-50 dark:bg-slate-800';
+      if (importance >= 4) return 'bg-gray-50 dark:bg-gray-850';
+      return 'bg-white dark:bg-gray-900';
     };
     
-    // 根据层级确定样式（不使用背景色）
-    const getLevelStyles = (level: number) => {
-      const baseStyles = "border-2 border-gray-200 rounded-lg hover:border-black hover:shadow-md transition-all duration-200 cursor-pointer";
+    // 根据层级确定样式
+    const getLevelStyles = (level: number, isSimplified: boolean) => {
+      const baseStyles = "border-2 border-gray-200 dark:border-gray-700 rounded-lg hover:border-black dark:hover:border-white hover:shadow-md transition-all duration-200 cursor-pointer";
       
-      switch (level) {
-        case 0: // 书级别
-          return `${baseStyles} p-6 shadow-sm border-gray-300`;
-        case 1: // 部级别  
-          return `${baseStyles} p-5 ml-6 border-l-4 border-l-blue-500`;
-        case 2: // 章级别
-          return `${baseStyles} p-4 ml-12 border-l-4 border-l-green-500`;
-        case 3: // 场景级别
-          return `${baseStyles} p-3 ml-18 border-l-4 border-l-yellow-500`;
-        default: // 更深层级
-          return `${baseStyles} p-3 ml-24 border-l-4 border-l-gray-500`;
+      if (isSimplified) {
+        // 简化视图样式
+        switch (level) {
+          case 0: // 章级别（在简化视图中是顶级）
+            return `${baseStyles} p-5 shadow-sm border-gray-300 dark:border-gray-600`;
+          case 1: // 场景级别
+            return `${baseStyles} p-4 ml-6 border-l-4 border-l-yellow-500`;
+          default:
+            return `${baseStyles} p-3 ml-12`;
+        }
+      } else {
+        // 完整视图样式
+        switch (level) {
+          case 0: // 书级别
+            return `${baseStyles} p-6 shadow-sm border-gray-300 dark:border-gray-600`;
+          case 1: // 部级别  
+            return `${baseStyles} p-5 ml-6 border-l-4 border-l-blue-500`;
+          case 2: // 章级别
+            return `${baseStyles} p-4 ml-12 border-l-4 border-l-green-500`;
+          case 3: // 场景级别
+            return `${baseStyles} p-3 ml-18 border-l-4 border-l-yellow-500`;
+          default: // 更深层级
+            return `${baseStyles} p-3 ml-24 border-l-4 border-l-gray-500`;
+        }
       }
     };
 
@@ -178,19 +206,19 @@ export const PlotElementsManager: React.FC<PlotElementsManagerProps> = ({ projec
 
     return (
       <div key={element.id} className="mb-3">
-        <div className={`${getLevelStyles(level)} ${getImportanceBackground(1)}`}>
+        <div className={`${getLevelStyles(level, isSimplified)} ${getImportanceBackground(1)}`}>
           <div className="flex items-start justify-between">
             <div className="flex items-start space-x-3 flex-1">
               <div className="flex items-center space-x-2">
                 {hasChildren && (
                   <button
                     onClick={() => toggleExpanded(element.id)}
-                    className="p-1 hover:bg-white hover:bg-opacity-50 rounded transition-colors"
+                    className="p-1 hover:bg-white dark:hover:bg-gray-700 hover:bg-opacity-50 rounded transition-colors"
                   >
                     {isExpanded ? (
-                      <ChevronDown className="w-4 h-4 text-gray-600" />
+                      <ChevronDown className="w-4 h-4 text-gray-600 dark:text-gray-400" />
                     ) : (
-                      <ChevronRight className="w-4 h-4 text-gray-600" />
+                      <ChevronRight className="w-4 h-4 text-gray-600 dark:text-gray-400" />
                     )}
                   </button>
                 )}
@@ -199,7 +227,7 @@ export const PlotElementsManager: React.FC<PlotElementsManagerProps> = ({ projec
               
               <div className="flex-1">
                 <div className="flex items-center space-x-3 mb-2">
-                  <h3 className={`font-semibold text-gray-900 ${level === 0 ? 'text-xl' : level === 1 ? 'text-lg' : 'text-base'}`}>
+                  <h3 className={`font-semibold text-gray-900 dark:text-white ${level === 0 ? 'text-xl' : level === 1 ? 'text-lg' : 'text-base'}`}>
                     {element.title}
                   </h3>
                   <span className={`px-2 py-1 rounded-full text-xs font-medium ${getTypeColor(element.type)}`}>
@@ -211,12 +239,12 @@ export const PlotElementsManager: React.FC<PlotElementsManagerProps> = ({ projec
                 </div>
                 
                 {element.summary && (
-                  <p className="text-gray-600 text-sm mb-2 line-clamp-2">
+                  <p className="text-gray-600 dark:text-gray-400 text-sm mb-2 line-clamp-2">
                     {element.summary}
                   </p>
                 )}
                 
-                <div className="flex items-center space-x-4 text-sm text-gray-500">
+                <div className="flex items-center space-x-4 text-sm text-gray-500 dark:text-gray-400">
                   {element.wordCount > 0 && (
                     <span>{element.wordCount.toLocaleString()} 字</span>
                   )}
@@ -234,10 +262,19 @@ export const PlotElementsManager: React.FC<PlotElementsManagerProps> = ({ projec
             </div>
             
             <div className="flex items-center space-x-1">
-              <button className="p-1 text-gray-400 hover:text-gray-600 transition-colors">
+              {(element.type === 'chapter' || element.type === 'scene') && (
+                <button 
+                  onClick={() => navigate(`/project/${projectId}/edit/${element.id}`)}
+                  className="p-1 text-gray-400 dark:text-gray-500 hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
+                  title="编辑内容"
+                >
+                  <PenTool className="w-4 h-4" />
+                </button>
+              )}
+              <button className="p-1 text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 transition-colors">
                 <Edit className="w-4 h-4" />
               </button>
-              <button className="p-1 text-gray-400 hover:text-red-600 transition-colors">
+              <button className="p-1 text-gray-400 dark:text-gray-500 hover:text-red-600 dark:hover:text-red-400 transition-colors">
                 <Trash2 className="w-4 h-4" />
               </button>
             </div>
@@ -247,7 +284,7 @@ export const PlotElementsManager: React.FC<PlotElementsManagerProps> = ({ projec
         {hasChildren && isExpanded && (
           <div className="mt-4 space-y-3">
             {element.children!.map((child) => 
-              renderPlotElement(child, level + 1)
+              renderPlotElement(child, level + 1, isSimplified)
             )}
           </div>
         )}
@@ -255,12 +292,14 @@ export const PlotElementsManager: React.FC<PlotElementsManagerProps> = ({ projec
     );
   };
 
-  const hierarchicalElements = buildHierarchy(plotElements);
+  const hierarchicalElements = project.plotViewMode === 'simplified' 
+    ? buildSimplifiedHierarchy(plotElements)
+    : buildHierarchy(plotElements);
 
   if (loading) {
     return (
       <div className="flex items-center justify-center py-12">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-black"></div>
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-black dark:border-white"></div>
       </div>
     );
   }
@@ -270,15 +309,30 @@ export const PlotElementsManager: React.FC<PlotElementsManagerProps> = ({ projec
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold text-gray-900">情节大纲</h2>
-          <p className="text-gray-600">组织和管理你的故事结构</p>
+          <h2 className="text-2xl font-bold text-gray-900 dark:text-white">情节大纲</h2>
+          <p className="text-gray-600 dark:text-gray-400">
+            {project.plotViewMode === 'simplified' 
+              ? `管理你的${project.levelNames.chapter}和${project.levelNames.scene}` 
+              : '组织和管理你的故事结构'
+            }
+          </p>
+          {project.plotViewMode === 'simplified' && (
+            <div className="mt-2 text-sm text-blue-600 dark:text-blue-400">
+              💡 当前为简化视图，只显示{project.levelNames.chapter}层级。可在项目设置中切换到完整视图。
+            </div>
+          )}
         </div>
         <button
           onClick={() => setShowCreateModal(true)}
-          className="flex items-center space-x-2 px-4 py-2 bg-black text-white rounded-md hover:bg-gray-800 transition-colors"
+          className="flex items-center space-x-2 px-4 py-2 bg-black dark:bg-white text-white dark:text-black rounded-md hover:bg-gray-800 dark:hover:bg-gray-200 transition-colors"
         >
           <Plus className="w-4 h-4" />
-          <span>添加情节</span>
+          <span>
+            {project.plotViewMode === 'simplified' 
+              ? `添加${project.levelNames.chapter}` 
+              : '添加情节'
+            }
+          </span>
         </button>
       </div>
 
@@ -292,21 +346,27 @@ export const PlotElementsManager: React.FC<PlotElementsManagerProps> = ({ projec
               placeholder="搜索情节..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:border-black focus:border-2 transition-colors"
+              className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:border-black dark:focus:border-white focus:border-2 transition-colors bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
             />
           </div>
           <div className="relative">
             <select
               value={selectedType}
               onChange={(e) => setSelectedType(e.target.value)}
-              className="pl-3 pr-8 py-2 border border-gray-300 rounded-md focus:outline-none focus:border-black focus:border-2 transition-colors appearance-none bg-white w-full"
+              className="pl-3 pr-8 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:border-black dark:focus:border-white focus:border-2 transition-colors appearance-none bg-white dark:bg-gray-700 text-gray-900 dark:text-white w-full"
             >
               <option value="all">所有类型</option>
-              <option value="book">书</option>
-              <option value="part">部</option>
-              <option value="chapter">章</option>
-              <option value="scene">场景</option>
-              <option value="beat">节拍</option>
+              {project.plotViewMode === 'complete' && (
+                <>
+                  <option value="book">{project.levelNames.book}</option>
+                  <option value="part">{project.levelNames.part}</option>
+                </>
+              )}
+              <option value="chapter">{project.levelNames.chapter}</option>
+              <option value="scene">{project.levelNames.scene}</option>
+              {project.plotViewMode === 'complete' && (
+                <option value="beat">节拍</option>
+              )}
             </select>
             <div className="absolute inset-y-0 right-0 flex items-center pr-2 pointer-events-none">
               <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -320,14 +380,14 @@ export const PlotElementsManager: React.FC<PlotElementsManagerProps> = ({ projec
         <div className="flex items-center space-x-2">
           <button
             onClick={expandAll}
-            className="flex items-center space-x-1 px-3 py-1 text-sm text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-md transition-colors"
+            className="flex items-center space-x-1 px-3 py-1 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md transition-colors"
           >
             <Expand className="w-4 h-4" />
             <span>展开全部</span>
           </button>
           <button
             onClick={collapseAll}
-            className="flex items-center space-x-1 px-3 py-1 text-sm text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-md transition-colors"
+            className="flex items-center space-x-1 px-3 py-1 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md transition-colors"
           >
             <Minimize2 className="w-4 h-4" />
             <span>折叠全部</span>
@@ -339,19 +399,32 @@ export const PlotElementsManager: React.FC<PlotElementsManagerProps> = ({ projec
       {hierarchicalElements.length === 0 ? (
         <div className="text-center py-12">
           <BookOpen className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-          <h3 className="text-lg font-medium text-gray-900 mb-2">还没有情节大纲</h3>
-          <p className="text-gray-600 mb-4">开始构建你的故事结构吧</p>
+          <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
+            {project.plotViewMode === 'simplified' 
+              ? `还没有${project.levelNames.chapter}` 
+              : '还没有情节大纲'
+            }
+          </h3>
+          <p className="text-gray-600 dark:text-gray-400 mb-4">
+            {project.plotViewMode === 'simplified' 
+              ? `开始创建你的第一个${project.levelNames.chapter}吧` 
+              : '开始构建你的故事结构吧'
+            }
+          </p>
           <button
             onClick={() => setShowCreateModal(true)}
-            className="px-4 py-2 bg-black text-white rounded-md hover:bg-gray-800 transition-colors"
+            className="px-4 py-2 bg-black dark:bg-white text-white dark:text-black rounded-md hover:bg-gray-800 dark:hover:bg-gray-200 transition-colors"
           >
-            创建第一个情节
+            {project.plotViewMode === 'simplified' 
+              ? `创建第一个${project.levelNames.chapter}` 
+              : '创建第一个情节'
+            }
           </button>
         </div>
       ) : (
         <div className="space-y-4">
           {hierarchicalElements.map((element) => 
-            renderPlotElement(element, 0)
+            renderPlotElement(element, 0, project.plotViewMode === 'simplified')
           )}
         </div>
       )}

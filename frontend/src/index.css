@@ -1,5 +1,151 @@
 @import "tailwindcss";
 
+/* 手动添加暗黑模式样式 */
+@media (prefers-color-scheme: dark) {
+  :root {
+    color-scheme: dark;
+  }
+}
+
+.dark {
+  color-scheme: dark;
+}
+
+/* 暗黑模式背景色 - 更黑的配色 */
+.dark .bg-white { background-color: rgb(3 7 18) !important; }
+.dark .bg-gray-50 { background-color: rgb(3 7 18) !important; }
+.dark .bg-gray-100 { background-color: rgb(31 41 55) !important; }
+.dark .bg-gray-200 { background-color: rgb(55 65 81) !important; }
+.dark .bg-slate-50 { background-color: rgb(15 23 42) !important; }
+
+/* 暗黑模式文字色 */
+.dark .text-black { color: rgb(255 255 255) !important; }
+.dark .text-gray-900 { color: rgb(243 244 246) !important; }
+.dark .text-gray-800 { color: rgb(229 231 235) !important; }
+.dark .text-gray-700 { color: rgb(209 213 219) !important; }
+.dark .text-gray-600 { color: rgb(156 163 175) !important; }
+.dark .text-gray-500 { color: rgb(107 114 128) !important; }
+
+/* 暗黑模式边框色 */
+.dark .border-gray-200 { border-color: rgb(75 85 99) !important; }
+.dark .border-gray-300 { border-color: rgb(107 114 128) !important; }
+
+/* 暗黑模式按钮 */
+.dark .bg-black { background-color: rgb(255 255 255) !important; color: rgb(0 0 0) !important; }
+.dark .text-white { color: rgb(0 0 0) !important; }
+
+/* 暗黑模式输入框 */
+.dark input, .dark textarea, .dark select {
+  background-color: rgb(55 65 81) !important;
+  color: rgb(243 244 246) !important;
+  border-color: rgb(107 114 128) !important;
+}
+
+.dark input:focus, .dark textarea:focus, .dark select:focus {
+  border-color: rgb(156 163 175) !important;
+  box-shadow: 0 0 0 1px rgb(156 163 175) !important;
+}
+
+/* 暗黑模式悬停效果 */
+.dark .hover\:bg-gray-50:hover { background-color: rgb(55 65 81) !important; }
+.dark .hover\:bg-gray-100:hover { background-color: rgb(75 85 99) !important; }
+
+/* 暗黑模式卡片悬停效果 - 白色边框 */
+.dark .hover\:border-black:hover { 
+  border-color: rgb(255 255 255) !important; 
+  box-shadow: 0 0 0 1px rgb(255 255 255) !important;
+}
+
+/* 暗黑模式角色卡片特殊悬停效果 */
+.dark .border-2:hover { 
+  border-color: rgb(255 255 255) !important; 
+  box-shadow: 0 4px 12px rgba(255, 255, 255, 0.1) !important;
+  transform: translateY(-2px) !important;
+  transition: all 0.2s ease-in-out !important;
+}
+
+/* 暗黑模式项目卡片悬停效果 */
+.dark .cursor-pointer:hover { 
+  border-color: rgb(255 255 255) !important; 
+  box-shadow: 0 4px 12px rgba(255, 255, 255, 0.15) !important;
+  transform: translateY(-1px) !important;
+  transition: all 0.2s ease-in-out !important;
+}
+
+/* 左侧导航栏暗黑模式背景 */
+.dark .bg-slate-50 { background-color: rgb(3 7 18) !important; }
+.dark .bg-gray-800 { background-color: rgb(3 7 18) !important; }
+
+/* 直接覆盖Tailwind的暗黑模式类 - 使用更强的选择器 */
+html.dark .dark\:bg-gray-800,
+.dark .dark\:bg-gray-800,
+html.dark div[class*="bg-gray-50"],
+html.dark div[class*="dark:bg-gray-800"] { 
+  background-color: rgb(3 7 18) !important; 
+}
+
+/* 针对侧边栏的特定覆盖 */
+html.dark .fixed.inset-y-0.left-0 {
+  background-color: rgb(3 7 18) !important;
+}
+
+/* 导航标签悬停效果 - 适用于明暗模式 */
+.nav-tab {
+  cursor: pointer !important;
+  transition: all 0.2s ease-in-out !important;
+}
+
+.nav-tab:hover {
+  cursor: pointer !important;
+}
+
+/* 明亮模式导航标签悬停 */
+.nav-tab:hover:not(.dark *) {
+  color: rgb(0 0 0) !important;
+  background-color: rgba(0, 0, 0, 0.05) !important;
+}
+
+/* 暗黑模式导航标签悬停 */
+.dark .nav-tab:hover {
+  color: rgb(0 0 0) !important;
+  background-color: rgba(255, 255, 255, 0.9) !important;
+}
+
+/* Modal 暗黑模式背景 */
+.dark .fixed.inset-0.bg-black.bg-opacity-50 {
+  background-color: rgba(0, 0, 0, 0.8) !important;
+}
+
+.dark .bg-white.rounded-lg {
+  background-color: rgb(31 41 55) !important;
+}
+
+.dark .modal-content {
+  background-color: rgb(31 41 55) !important;
+}
+
+/* 暗黑模式切换按钮悬停效果 */
+.theme-toggle-btn {
+  cursor: pointer !important;
+  transition: all 0.2s ease-in-out !important;
+}
+
+.theme-toggle-btn:hover {
+  cursor: pointer !important;
+}
+
+/* 明亮模式暗黑模式切换按钮悬停 */
+.theme-toggle-btn:hover:not(.dark *) {
+  color: rgb(0 0 0) !important;
+  background-color: rgba(0, 0, 0, 0.05) !important;
+}
+
+/* 暗黑模式暗黑模式切换按钮悬停 */
+.dark .theme-toggle-btn:hover {
+  color: rgb(0 0 0) !important;
+  background-color: rgba(255, 255, 255, 0.9) !important;
+}
+
 /* Custom styles for Vercel-inspired design */
 @layer base {
   * {
@@ -27,6 +173,13 @@
     -webkit-box-orient: vertical;
     overflow: hidden;
   }
+  
+  .line-clamp-4 {
+    display: -webkit-box;
+    -webkit-line-clamp: 4;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
 }
 
 /* Custom scrollbar */
@@ -45,23 +198,4 @@
 
 ::-webkit-scrollbar-thumb:hover {
   background: #d1d5db;
-}
-
-/* Focus styles */
-.focus-ring {
-  @apply focus:outline-none focus:ring-2 focus:ring-black focus:ring-offset-2;
-}
-
-/* Animation for loading states */
-@keyframes pulse {
-  0%, 100% {
-    opacity: 1;
-  }
-  50% {
-    opacity: .5;
-  }
-}
-
-.animate-pulse {
-  animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
 }

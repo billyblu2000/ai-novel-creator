@@ -14,7 +14,9 @@ export const ProjectSettings: React.FC<ProjectSettingsProps> = ({ project, onPro
     description: project.description || '',
     genre: project.genre || '',
     status: project.status,
-    targetWords: project.targetWords || ''
+    targetWords: project.targetWords || '',
+    plotViewMode: project.plotViewMode,
+    levelNames: { ...project.levelNames }
   });
   const [saving, setSaving] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
@@ -26,6 +28,16 @@ export const ProjectSettings: React.FC<ProjectSettingsProps> = ({ project, onPro
     }));
   };
 
+  const handleLevelNameChange = (level: keyof typeof formData.levelNames, value: string) => {
+    setFormData(prev => ({
+      ...prev,
+      levelNames: {
+        ...prev.levelNames,
+        [level]: value
+      }
+    }));
+  };
+
   const handleSave = async () => {
     try {
       setSaving(true);
@@ -34,7 +46,9 @@ export const ProjectSettings: React.FC<ProjectSettingsProps> = ({ project, onPro
         description: formData.description || undefined,
         genre: formData.genre || undefined,
         status: formData.status,
-        targetWords: formData.targetWords ? Number(formData.targetWords) : undefined
+        targetWords: formData.targetWords ? Number(formData.targetWords) : undefined,
+        plotViewMode: formData.plotViewMode,
+        levelNames: formData.levelNames
       });
       onProjectUpdate(updatedProject);
     } catch (error) {
@@ -184,37 +198,143 @@ export const ProjectSettings: React.FC<ProjectSettingsProps> = ({ project, onPro
         </div>
       </div>
 
+      {/* Plot Management Settings */}
+      <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-6">
+        <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">情节管理设置</h3>
+        
+        <div className="space-y-6">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
+              情节视图模式
+            </label>
+            <div className="space-y-3">
+              <label className="flex items-start space-x-3 cursor-pointer">
+                <input
+                  type="radio"
+                  name="plotViewMode"
+                  value="simplified"
+                  checked={formData.plotViewMode === 'simplified'}
+                  onChange={(e) => handleInputChange('plotViewMode', e.target.value)}
+                  className="mt-1"
+                />
+                <div>
+                  <div className="text-sm font-medium text-gray-900 dark:text-white">简化视图</div>
+                  <div className="text-xs text-gray-500 dark:text-gray-400">只显示章节层级，适合大多数创作者</div>
+                </div>
+              </label>
+              <label className="flex items-start space-x-3 cursor-pointer">
+                <input
+                  type="radio"
+                  name="plotViewMode"
+                  value="complete"
+                  checked={formData.plotViewMode === 'complete'}
+                  onChange={(e) => handleInputChange('plotViewMode', e.target.value)}
+                  className="mt-1"
+                />
+                <div>
+                  <div className="text-sm font-medium text-gray-900 dark:text-white">完整视图</div>
+                  <div className="text-xs text-gray-500 dark:text-gray-400">显示书-部-章-场景的完整四级结构</div>
+                </div>
+              </label>
+            </div>
+            {project.plotElements && project.plotElements.length > 0 && formData.plotViewMode !== project.plotViewMode && (
+              <div className="mt-3 p-3 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-md">
+                <p className="text-sm text-yellow-800 dark:text-yellow-200">
+                  ⚠️ 更改视图模式不会影响已有的情节结构，只会改变显示方式。
+                </p>
+              </div>
+            )}
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
+              层级命名自定义
+            </label>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label htmlFor="bookName" className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  书级别名称
+                </label>
+                <input
+                  type="text"
+                  id="bookName"
+                  value={formData.levelNames.book}
+                  onChange={(e) => handleLevelNameChange('book', e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:border-black dark:focus:border-white focus:border-2 transition-colors bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                />
+              </div>
+              <div>
+                <label htmlFor="partName" className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  部级别名称
+                </label>
+                <input
+                  type="text"
+                  id="partName"
+                  value={formData.levelNames.part}
+                  onChange={(e) => handleLevelNameChange('part', e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:border-black dark:focus:border-white focus:border-2 transition-colors bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                />
+              </div>
+              <div>
+                <label htmlFor="chapterName" className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  章级别名称
+                </label>
+                <input
+                  type="text"
+                  id="chapterName"
+                  value={formData.levelNames.chapter}
+                  onChange={(e) => handleLevelNameChange('chapter', e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:border-black dark:focus:border-white focus:border-2 transition-colors bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                />
+              </div>
+              <div>
+                <label htmlFor="sceneName" className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  场景级别名称
+                </label>
+                <input
+                  type="text"
+                  id="sceneName"
+                  value={formData.levelNames.scene}
+                  onChange={(e) => handleLevelNameChange('scene', e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:border-black dark:focus:border-white focus:border-2 transition-colors bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
       {/* Project Statistics */}
-      <div className="bg-white border border-gray-200 rounded-lg p-6">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4">项目统计</h3>
+      <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-6">
+        <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">项目统计</h3>
         
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           <div className="text-center">
-            <div className="text-2xl font-bold text-gray-900">{project.wordCount.toLocaleString()}</div>
-            <div className="text-sm text-gray-600">当前字数</div>
+            <div className="text-2xl font-bold text-gray-900 dark:text-white">{project.wordCount.toLocaleString()}</div>
+            <div className="text-sm text-gray-600 dark:text-gray-400">当前字数</div>
           </div>
           
           {project.targetWords && (
             <div className="text-center">
-              <div className="text-2xl font-bold text-gray-900">
+              <div className="text-2xl font-bold text-gray-900 dark:text-white">
                 {Math.round((project.wordCount / project.targetWords) * 100)}%
               </div>
-              <div className="text-sm text-gray-600">完成进度</div>
+              <div className="text-sm text-gray-600 dark:text-gray-400">完成进度</div>
             </div>
           )}
           
           <div className="text-center">
-            <div className="text-2xl font-bold text-gray-900">
+            <div className="text-2xl font-bold text-gray-900 dark:text-white">
               {new Date(project.createdAt).toLocaleDateString('zh-CN')}
             </div>
-            <div className="text-sm text-gray-600">创建日期</div>
+            <div className="text-sm text-gray-600 dark:text-gray-400">创建日期</div>
           </div>
           
           <div className="text-center">
-            <div className="text-2xl font-bold text-gray-900">
+            <div className="text-2xl font-bold text-gray-900 dark:text-white">
               {new Date(project.updatedAt).toLocaleDateString('zh-CN')}
             </div>
-            <div className="text-sm text-gray-600">最后更新</div>
+            <div className="text-sm text-gray-600 dark:text-gray-400">最后更新</div>
           </div>
         </div>
       </div>

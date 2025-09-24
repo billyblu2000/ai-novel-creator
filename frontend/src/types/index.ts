@@ -7,6 +7,13 @@ export interface Project {
   status: 'draft' | 'active' | 'completed' | 'archived';
   wordCount: number;
   targetWords?: number;
+  plotViewMode: 'simplified' | 'complete';
+  levelNames: {
+    book: string;
+    part: string;
+    chapter: string;
+    scene: string;
+  };
   createdAt: string;
   updatedAt: string;
   // 关联数据
@@ -135,11 +142,28 @@ export interface PlotElementTimeline {
 }
 
 // API请求类型
+export interface ProjectSettings {
+  plotViewMode: 'simplified' | 'complete';
+  levelNames: {
+    book: string;
+    part: string;
+    chapter: string;
+    scene: string;
+  };
+}
+
 export interface CreateProjectData {
   title: string;
   description?: string;
   genre?: string;
   targetWords?: number;
+  plotViewMode?: 'simplified' | 'complete';
+  levelNames?: {
+    book: string;
+    part: string;
+    chapter: string;
+    scene: string;
+  };
 }
 
 export interface UpdateProjectData {
@@ -148,6 +172,13 @@ export interface UpdateProjectData {
   genre?: string;
   status?: 'draft' | 'active' | 'completed' | 'archived';
   targetWords?: number;
+  plotViewMode?: 'simplified' | 'complete';
+  levelNames?: {
+    book: string;
+    part: string;
+    chapter: string;
+    scene: string;
+  };
 }
 
 export interface CreateCharacterData {

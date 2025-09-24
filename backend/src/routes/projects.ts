@@ -86,22 +86,78 @@ router.get('/:id', async (req, res) => {
 // POST /api/projects - 创建新项目
 router.post('/', async (req, res) => {
   try {
-    const { title, description, genre, targetWords } = req.body;
+    const { 
+      title, 
+      description, 
+      genre, 
+      targetWords, 
+      plotViewMode = 'simplified',
+      levelNames = {
+        book: '书',
+        part: '部', 
+        chapter: '章',
+        scene: '场景'
+      }
+    } = req.body;
     
     if (!title || title.trim() === '') {
       return res.status(400).json({ error: 'Title is required' });
     }
     
-    const project = await prisma.project.create({
-      data: {
-        title: title.trim(),
-        description: description?.trim() || null,
-        genre: genre || null,
-        targetWords: targetWords || null
-      }
+    // 使用事务创建项目和默认结构
+    const result = await prisma.$transaction(async (tx) => {
+      // 创建项目
+      const project = await tx.project.create({
+        data: {
+          title: title.trim(),
+          description: description?.trim() || null,
+          genre: genre || null,
+          targetWords: targetWords || null,
+          plotViewMode,
+          levelNames
+        }
+      });
+      
+      // 创建默认的书/部/章结构
+      const defaultBook = await tx.plotElement.create({
+        data: {
+          projectId: project.id,
+          title: `默认${levelNames.book}`,
+          type: 'book',
+          order: 1,
+          content: '',
+          status: 'planned'
+        }
+      });
+      
+      const defaultPart = await tx.plotElement.create({
+        data: {
+          projectId: project.id,
+          title: `第一${levelNames.part}`,
+          type: 'part',
+          order: 1,
+          parentId: defaultBook.id,
+          content: '',
+          status: 'planned'
+        }
+      });
+      
+      await tx.plotElement.create({
+        data: {
+          projectId: project.id,
+          title: `第一${levelNames.chapter}`,
+          type: 'chapter',
+          order: 1,
+          parentId: defaultPart.id,
+          content: '',
+          status: 'planned'
+        }
+      });
+      
+      return project;
     });
     
-    return res.status(201).json(project);
+    return res.status(201).json(result);
   } catch (error) {
     console.error('Error creating project:', error);
     return res.status(500).json({ error: 'Failed to create project' });
@@ -112,7 +168,7 @@ router.post('/', async (req, res) => {
 router.put('/:id', async (req, res) => {
   try {
     const { id } = req.params;
-    const { title, description, genre, status, targetWords } = req.body;
+    const { title, description, genre, status, targetWords, plotViewMode, levelNames } = req.body;
     
     const updateData: any = {};
     if (title !== undefined) updateData.title = title.trim();
@@ -120,6 +176,8 @@ router.put('/:id', async (req, res) => {
     if (genre !== undefined) updateData.genre = genre || null;
     if (status !== undefined) updateData.status = status;
     if (targetWords !== undefined) updateData.targetWords = targetWords || null;
+    if (plotViewMode !== undefined) updateData.plotViewMode = plotViewMode;
+    if (levelNames !== undefined) updateData.levelNames = levelNames;
     
     const project = await prisma.project.update({
       where: { id },

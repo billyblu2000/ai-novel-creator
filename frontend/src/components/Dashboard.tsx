@@ -1,21 +1,21 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Search, MoreHorizontal, Users, Globe, BookOpen, Clock } from 'lucide-react';
+import { Plus, Search, Users, Globe, BookOpen, Clock } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import type { Project, ProjectStats } from '../types';
 import { projectsApi } from '../services/api';
-import { CreateProjectModal } from './CreateProjectModal';
-import { EditProjectModal } from './EditProjectModal';
+
+import { useTheme } from '../contexts/ThemeContext';
 
 export const Dashboard: React.FC = () => {
   const navigate = useNavigate();
+  useTheme(); // 确保主题上下文可用
   const [projects, setProjects] = useState<Project[]>([]);
   const [projectStats, setProjectStats] = useState<Record<string, ProjectStats>>({});
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
-  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
-  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-  const [editingProject, setEditingProject] = useState<Project | null>(null);
+
+
 
   useEffect(() => {
     loadProjects();
@@ -47,31 +47,9 @@ export const Dashboard: React.FC = () => {
     }
   };
 
-  const handleCreateProject = async (projectData: { title: string; description?: string; genre?: string; targetWords?: number }) => {
-    try {
-      const newProject = await projectsApi.create(projectData);
-      setProjects(prev => [newProject, ...prev]);
-      setIsCreateModalOpen(false);
-    } catch (error) {
-      console.error('Error creating project:', error);
-    }
-  };
 
-  const handleEditProject = (project: Project) => {
-    setEditingProject(project);
-    setIsEditModalOpen(true);
-  };
 
-  const handleUpdateProject = async (id: string, projectData: Partial<Project>) => {
-    try {
-      const updatedProject = await projectsApi.update(id, projectData);
-      setProjects(prev => prev.map(p => p.id === id ? updatedProject : p));
-      setIsEditModalOpen(false);
-      setEditingProject(null);
-    } catch (error) {
-      console.error('Error updating project:', error);
-    }
-  };
+
 
   // const handleDeleteProject = async (id: string) => {
   //   if (!confirm('确定要删除这个项目吗？')) return;
@@ -115,24 +93,24 @@ export const Dashboard: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-white flex items-center justify-center">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-black"></div>
+      <div className="min-h-screen bg-white dark:bg-gray-900 flex items-center justify-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-black dark:border-white"></div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen bg-white dark:bg-gray-900">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Header */}
         <div className="flex items-center justify-between mb-8">
           <div>
-            <h1 className="text-3xl font-bold text-black">AI Novel Creator</h1>
-            <p className="text-gray-600 mt-1">管理你的小说项目</p>
+            <h1 className="text-3xl font-bold text-black dark:text-white">AI Novel Creator</h1>
+            <p className="text-gray-600 dark:text-gray-400 mt-1">管理你的小说项目</p>
           </div>
           <button
-            onClick={() => setIsCreateModalOpen(true)}
-            className="flex items-center space-x-2 px-4 py-2 bg-black text-white rounded-md hover:bg-gray-800 transition-colors"
+            onClick={() => navigate('/create')}
+            className="flex items-center space-x-2 px-4 py-2 bg-black text-white hover:bg-gray-800 dark:bg-white dark:text-black dark:hover:bg-gray-200 rounded-md transition-colors"
           >
             <Plus className="w-4 h-4" />
             <span>新建项目</span>
@@ -148,14 +126,14 @@ export const Dashboard: React.FC = () => {
               placeholder="搜索项目..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:border-black focus:border-2 transition-colors"
+              className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:border-black dark:focus:border-white focus:border-2 transition-colors bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
             />
           </div>
           <div className="relative">
             <select
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
-              className="pl-3 pr-8 py-2 border border-gray-300 rounded-md focus:outline-none focus:border-black focus:border-2 transition-colors appearance-none bg-white w-full"
+              className="pl-3 pr-8 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:border-black dark:focus:border-white focus:border-2 transition-colors appearance-none bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 w-full"
             >
               <option value="all">所有状态</option>
               <option value="draft">草稿</option>
@@ -177,16 +155,16 @@ export const Dashboard: React.FC = () => {
             <div className="w-24 h-24 mx-auto mb-4 bg-gray-100 rounded-full flex items-center justify-center">
               <Plus className="w-8 h-8 text-gray-400" />
             </div>
-            <h3 className="text-lg font-medium text-gray-900 mb-2">
+            <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-2">
               {projects.length === 0 ? '还没有项目' : '没有找到匹配的项目'}
             </h3>
-            <p className="text-gray-600 mb-4">
+            <p className="text-gray-600 dark:text-gray-400 mb-4">
               {projects.length === 0 ? '创建你的第一个小说项目开始创作吧' : '尝试调整搜索条件或筛选器'}
             </p>
             {projects.length === 0 && (
               <button
-                onClick={() => setIsCreateModalOpen(true)}
-                className="px-4 py-2 bg-black text-white rounded-md hover:bg-gray-800 transition-colors"
+                onClick={() => navigate('/create')}
+                className="px-4 py-2 bg-black text-white hover:bg-gray-800 dark:bg-white dark:text-black dark:hover:bg-gray-200 rounded-md transition-colors"
               >
                 创建项目
               </button>
@@ -201,11 +179,11 @@ export const Dashboard: React.FC = () => {
                 <div
                   key={project.id}
                   onClick={() => handleProjectClick(project.id)}
-                  className="bg-white border-2 border-gray-200 rounded-lg p-6 hover:border-black hover:shadow-md hover:scale-[1.02] transition-all duration-200 cursor-pointer group"
+                  className="bg-white dark:bg-gray-800 border-2 border-gray-200 dark:border-gray-700 rounded-lg p-6 hover:border-black dark:hover:border-white hover:shadow-md hover:scale-[1.02] transition-all duration-200 cursor-pointer group"
                 >
                   <div className="flex items-start justify-between mb-4">
                     <div className="flex-1">
-                      <h3 className="text-lg font-semibold text-gray-900 mb-1 group-hover:text-black transition-colors">
+                      <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-1 group-hover:text-black dark:group-hover:text-white transition-colors">
                         {project.title}
                       </h3>
                       <div className="flex items-center space-x-2">
@@ -213,34 +191,24 @@ export const Dashboard: React.FC = () => {
                           {getStatusText(project.status)}
                         </span>
                         {project.genre && (
-                          <span className="text-xs text-gray-500 capitalize">
+                          <span className="text-xs text-gray-500 dark:text-gray-400 capitalize">
                             {project.genre}
                           </span>
                         )}
                       </div>
                     </div>
-                    <div className="relative">
-                      <button 
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleEditProject(project);
-                        }}
-                        className="p-1 text-gray-400 hover:text-gray-600 transition-colors"
-                      >
-                        <MoreHorizontal className="w-4 h-4" />
-                      </button>
-                    </div>
+
                   </div>
                   
                   {project.description && (
-                    <p className="text-gray-600 text-sm mb-4 line-clamp-2">
+                    <p className="text-gray-600 dark:text-gray-400 text-sm mb-4 line-clamp-2">
                       {project.description}
                     </p>
                   )}
                   
                   {/* Project Stats */}
                   {stats && (
-                    <div className="grid grid-cols-4 gap-2 mb-4 text-xs text-gray-500">
+                    <div className="grid grid-cols-4 gap-2 mb-4 text-xs text-gray-500 dark:text-gray-400">
                       <div className="flex items-center space-x-1">
                         <Users className="w-3 h-3" />
                         <span>{stats.characters}</span>
@@ -260,20 +228,20 @@ export const Dashboard: React.FC = () => {
                     </div>
                   )}
                   
-                  <div className="flex items-center justify-between text-sm text-gray-500 mb-3">
+                  <div className="flex items-center justify-between text-sm text-gray-500 dark:text-gray-400 mb-3">
                     <span>{project.wordCount.toLocaleString()} 字</span>
                     <span>{new Date(project.updatedAt).toLocaleDateString('zh-CN')}</span>
                   </div>
                   
                   {project.targetWords && (
                     <div>
-                      <div className="flex justify-between text-xs text-gray-500 mb-1">
+                      <div className="flex justify-between text-xs text-gray-500 dark:text-gray-400 mb-1">
                         <span>进度</span>
                         <span>{Math.round((project.wordCount / project.targetWords) * 100)}%</span>
                       </div>
-                      <div className="w-full bg-gray-200 rounded-full h-1">
+                      <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-1">
                         <div 
-                          className="bg-black h-1 rounded-full transition-all duration-300"
+                          className="bg-black dark:bg-white h-1 rounded-full transition-all duration-300"
                           style={{ 
                             width: `${Math.min(100, (project.wordCount / project.targetWords) * 100)}%` 
                           }}
@@ -287,22 +255,7 @@ export const Dashboard: React.FC = () => {
           </div>
         )}
 
-        {/* Modals */}
-        <CreateProjectModal
-          isOpen={isCreateModalOpen}
-          onClose={() => setIsCreateModalOpen(false)}
-          onSubmit={handleCreateProject}
-        />
 
-        <EditProjectModal
-          isOpen={isEditModalOpen}
-          onClose={() => {
-            setIsEditModalOpen(false);
-            setEditingProject(null);
-          }}
-          onSubmit={handleUpdateProject}
-          project={editingProject}
-        />
       </div>
     </div>
   );

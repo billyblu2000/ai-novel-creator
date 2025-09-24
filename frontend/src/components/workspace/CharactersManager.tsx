@@ -1,18 +1,27 @@
 import React, { useState, useEffect } from 'react';
 import { Plus, Search, Edit, Trash2, User } from 'lucide-react';
-import type { Character } from '../../types';
+import type { Character, CreateCharacterData, UpdateCharacterData } from '../../types';
 import { charactersApi } from '../../services/api';
+import { CreateCharacterModal } from '../CreateCharacterModal';
+import { EditCharacterModal } from '../EditCharacterModal';
+import { CharacterDetail } from '../CharacterDetail';
+import { useTheme } from '../../contexts/ThemeContext';
 
 interface CharactersManagerProps {
   projectId: string;
 }
 
 export const CharactersManager: React.FC<CharactersManagerProps> = ({ projectId }) => {
+  useTheme(); // 确保主题上下文可用
   const [characters, setCharacters] = useState<Character[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedRole, setSelectedRole] = useState<string>('all');
-  const [, setShowCreateModal] = useState(false);
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [editingCharacter, setEditingCharacter] = useState<Character | null>(null);
+  const [selectedCharacterId, setSelectedCharacterId] = useState<string | null>(null);
+  const [viewMode, setViewMode] = useState<'list' | 'detail'>('list');
 
   useEffect(() => {
     loadCharacters();
@@ -28,6 +37,63 @@ export const CharactersManager: React.FC<CharactersManagerProps> = ({ projectId 
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleCreateCharacter = async (data: CreateCharacterData) => {
+    try {
+      const newCharacter = await charactersApi.create(data);
+      setCharacters(prev => [newCharacter, ...prev]);
+    } catch (error) {
+      console.error('Error creating character:', error);
+      throw error;
+    }
+  };
+
+  const handleEditCharacter = (character: Character) => {
+    setEditingCharacter(character);
+    setShowEditModal(true);
+  };
+
+  const handleUpdateCharacter = async (id: string, data: UpdateCharacterData) => {
+    try {
+      const updatedCharacter = await charactersApi.update(id, data);
+      setCharacters(prev => prev.map(c => c.id === id ? updatedCharacter : c));
+    } catch (error) {
+      console.error('Error updating character:', error);
+      throw error;
+    }
+  };
+
+  const handleDeleteCharacter = async (id: string, name: string) => {
+    if (!confirm(`确定要删除角色"${name}"吗？此操作无法撤销。`)) {
+      return;
+    }
+
+    try {
+      await charactersApi.delete(id);
+      setCharacters(prev => prev.filter(c => c.id !== id));
+    } catch (error) {
+      console.error('Error deleting character:', error);
+    }
+  };
+
+  const handleCharacterClick = (characterId: string) => {
+    setSelectedCharacterId(characterId);
+    setViewMode('detail');
+  };
+
+  const handleBackToList = () => {
+    setSelectedCharacterId(null);
+    setViewMode('list');
+  };
+
+  const handleCharacterUpdated = () => {
+    loadCharacters(); // 重新加载角色列表
+  };
+
+  const handleCharacterDeleted = () => {
+    loadCharacters(); // 重新加载角色列表
+    handleBackToList(); // 返回列表视图
   };
 
   const filteredCharacters = characters.filter(character => {
@@ -60,8 +126,20 @@ export const CharactersManager: React.FC<CharactersManagerProps> = ({ projectId 
   if (loading) {
     return (
       <div className="flex items-center justify-center py-12">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-black"></div>
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-black dark:border-white"></div>
       </div>
+    );
+  }
+
+  // 如果是详情视图，显示角色详情
+  if (viewMode === 'detail' && selectedCharacterId) {
+    return (
+      <CharacterDetail
+        characterId={selectedCharacterId}
+        onBack={handleBackToList}
+        onEdit={handleCharacterUpdated}
+        onDelete={handleCharacterDeleted}
+      />
     );
   }
 
@@ -70,12 +148,12 @@ export const CharactersManager: React.FC<CharactersManagerProps> = ({ projectId 
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold text-gray-900">角色管理</h2>
-          <p className="text-gray-600">管理小说中的所有角色</p>
+          <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100">角色管理</h2>
+          <p className="text-gray-600 dark:text-gray-400">管理小说中的所有角色</p>
         </div>
         <button
           onClick={() => setShowCreateModal(true)}
-          className="flex items-center space-x-2 px-4 py-2 bg-black text-white rounded-md hover:bg-gray-800 transition-colors"
+          className="flex items-center space-x-2 px-4 py-2 bg-black text-white hover:bg-gray-800 dark:bg-white dark:text-black dark:hover:bg-gray-200 rounded-md transition-colors"
         >
           <Plus className="w-4 h-4" />
           <span>添加角色</span>
@@ -91,14 +169,14 @@ export const CharactersManager: React.FC<CharactersManagerProps> = ({ projectId 
             placeholder="搜索角色..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:border-black focus:border-2 transition-colors"
+            className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:border-black dark:focus:border-white focus:border-2 transition-colors bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
           />
         </div>
         <div className="relative">
           <select
             value={selectedRole}
             onChange={(e) => setSelectedRole(e.target.value)}
-            className="pl-3 pr-8 py-2 border border-gray-300 rounded-md focus:outline-none focus:border-black focus:border-2 transition-colors appearance-none bg-white w-full"
+            className="pl-3 pr-8 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:border-black dark:focus:border-white focus:border-2 transition-colors appearance-none bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 w-full"
           >
           <option value="all">所有角色</option>
           <option value="protagonist">主角</option>
@@ -118,16 +196,16 @@ export const CharactersManager: React.FC<CharactersManagerProps> = ({ projectId 
       {filteredCharacters.length === 0 ? (
         <div className="text-center py-12">
           <User className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-          <h3 className="text-lg font-medium text-gray-900 mb-2">
+          <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-2">
             {characters.length === 0 ? '还没有角色' : '没有找到匹配的角色'}
           </h3>
-          <p className="text-gray-600 mb-4">
+          <p className="text-gray-600 dark:text-gray-400 mb-4">
             {characters.length === 0 ? '开始创建你的第一个角色吧' : '尝试调整搜索条件'}
           </p>
           {characters.length === 0 && (
             <button
               onClick={() => setShowCreateModal(true)}
-              className="px-4 py-2 bg-black text-white rounded-md hover:bg-gray-800 transition-colors"
+              className="px-4 py-2 bg-black text-white hover:bg-gray-800 dark:bg-white dark:text-black dark:hover:bg-gray-200 rounded-md transition-colors"
             >
               创建角色
             </button>
@@ -136,38 +214,77 @@ export const CharactersManager: React.FC<CharactersManagerProps> = ({ projectId 
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {filteredCharacters.map((character) => (
-            <div key={character.id} className={`border-2 border-gray-200 rounded-lg p-6 hover:border-black hover:shadow-md transition-all duration-200 cursor-pointer ${
-              character.importance >= 8 ? 'bg-gray-100' 
-              : character.importance >= 6 ? 'bg-slate-50'
-              : character.importance >= 4 ? 'bg-gray-50'
-              : 'bg-white'
-            }`}>
+            <div 
+              key={character.id} 
+              onClick={() => handleCharacterClick(character.id)}
+              className={`border-2 border-gray-200 dark:border-gray-700 rounded-lg p-6 hover:border-black dark:hover:border-white hover:shadow-md transition-all duration-200 cursor-pointer ${
+                character.importance >= 8 ? 'bg-gray-100 dark:bg-gray-700' 
+                : character.importance >= 6 ? 'bg-slate-50 dark:bg-gray-750'
+                : character.importance >= 4 ? 'bg-gray-50 dark:bg-gray-800'
+                : 'bg-white dark:bg-gray-800'
+              }`}
+            >
               <div className="flex items-start justify-between mb-4">
                 <div className="flex-1">
-                  <h3 className="text-lg font-semibold text-gray-900 mb-1">{character.name}</h3>
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-1">{character.name}</h3>
                   <span className={`inline-flex px-2 py-1 rounded-full text-xs font-medium ${getRoleColor(character.role)}`}>
                     {getRoleText(character.role)}
                   </span>
                 </div>
                 <div className="flex items-center space-x-1">
-                  <button className="p-1 text-gray-400 hover:text-gray-600 transition-colors">
+                  <button 
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleEditCharacter(character);
+                    }}
+                    className="p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
+                    title="编辑角色"
+                  >
                     <Edit className="w-4 h-4" />
                   </button>
-                  <button className="p-1 text-gray-400 hover:text-red-600 transition-colors">
+                  <button 
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleDeleteCharacter(character.id, character.name);
+                    }}
+                    className="p-1 text-gray-400 hover:text-red-600 dark:hover:text-red-400 transition-colors"
+                    title="删除角色"
+                  >
                     <Trash2 className="w-4 h-4" />
                   </button>
                 </div>
               </div>
               
-              <p className="text-gray-600 text-sm line-clamp-4 mb-4">
+              <p className="text-gray-600 dark:text-gray-400 text-sm line-clamp-4 mb-4">
                 {character.description}
               </p>
               
-
+              <div className="flex items-center justify-between text-sm text-gray-500 dark:text-gray-400">
+                <span>重要性: {character.importance}/10</span>
+                <span>{new Date(character.updatedAt).toLocaleDateString('zh-CN')}</span>
+              </div>
             </div>
           ))}
         </div>
       )}
+
+      {/* Modals */}
+      <CreateCharacterModal
+        isOpen={showCreateModal}
+        onClose={() => setShowCreateModal(false)}
+        onSubmit={handleCreateCharacter}
+        projectId={projectId}
+      />
+
+      <EditCharacterModal
+        isOpen={showEditModal}
+        onClose={() => {
+          setShowEditModal(false);
+          setEditingCharacter(null);
+        }}
+        onSubmit={handleUpdateCharacter}
+        character={editingCharacter}
+      />
     </div>
   );
 };

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, Routes, Route, Navigate, useNavigate } from 'react-router-dom';
-import { ArrowLeft, BarChart3, Users, Globe, BookOpen, Clock, StickyNote, Settings } from 'lucide-react';
+import { useParams, useNavigate } from 'react-router-dom';
+import { ArrowLeft, BarChart3, Users, Globe, Clock, StickyNote, Settings, PenTool, Menu, X, Moon, Sun } from 'lucide-react';
+import { useTheme } from '../contexts/ThemeContext';
 import type { Project } from '../types';
 import { projectsApi } from '../services/api';
 import { ProjectOverview } from './workspace/ProjectOverview';
@@ -11,22 +12,24 @@ import { TimelineManager } from './workspace/TimelineManager';
 import { NotesManager } from './workspace/NotesManager';
 import { ProjectSettings } from './workspace/ProjectSettings';
 
-const navigationItems = [
-  { id: 'overview', label: '概览', icon: BarChart3, path: '' },
-  { id: 'characters', label: '角色', icon: Users, path: 'characters' },
-  { id: 'world', label: '世界', icon: Globe, path: 'world' },
-  { id: 'plot', label: '情节', icon: BookOpen, path: 'plot' },
-  { id: 'timeline', label: '时间线', icon: Clock, path: 'timeline' },
-  { id: 'notes', label: '笔记', icon: StickyNote, path: 'notes' },
-  { id: 'settings', label: '设置', icon: Settings, path: 'settings' },
+const sidebarItems = [
+  { id: 'overview', label: '项目概览', icon: BarChart3 },
+  { id: 'characters', label: '角色管理', icon: Users },
+  { id: 'world', label: '世界设定', icon: Globe },
+  { id: 'timeline', label: '时间线', icon: Clock },
+  { id: 'notes', label: '创作笔记', icon: StickyNote },
+  { id: 'settings', label: '项目设置', icon: Settings },
 ];
 
 export const ProjectWorkspace: React.FC = () => {
   const { projectId } = useParams<{ projectId: string }>();
   const navigate = useNavigate();
+  const { toggleTheme, isDark } = useTheme();
   const [project, setProject] = useState<Project | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [activeView, setActiveView] = useState<string>('plot'); // 默认显示情节
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   useEffect(() => {
     if (projectId) {
@@ -79,63 +82,86 @@ export const ProjectWorkspace: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-white">
-      {/* Header */}
-      <header className="border-b border-gray-200 bg-white sticky top-0 z-50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between py-4">
-            <div className="flex items-center space-x-4">
+    <div className="min-h-screen bg-white dark:bg-gray-900 flex">
+      {/* Sidebar */}
+      <div className={`fixed inset-y-0 left-0 z-50 w-64 bg-gray-50 border-r border-gray-200 dark:border-gray-700 transform transition-transform duration-300 ease-in-out lg:translate-x-0 ${
+        sidebarOpen ? 'translate-x-0' : '-translate-x-full'
+      }`}>
+        <div className="flex flex-col h-full">
+          {/* Sidebar Header */}
+          <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700">
+            <div className="flex items-center space-x-3 flex-1">
               <button
                 onClick={handleBackToDashboard}
-                className="p-2 hover:bg-gray-100 rounded-md transition-colors"
-                title="Back to Dashboard"
+                className="p-1 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-md transition-colors text-gray-600 dark:text-gray-400"
+                title="返回项目列表"
               >
-                <ArrowLeft className="w-5 h-5" />
+                <ArrowLeft className="w-4 h-4" />
               </button>
-              <div>
-                <h1 className="text-xl font-bold text-black">{project.title}</h1>
-                <p className="text-sm text-gray-600">
-                  {project.genre && <span className="capitalize">{project.genre}</span>}
-                  {project.genre && project.status && <span className="mx-2">•</span>}
-                  <span className="capitalize">{project.status}</span>
-                </p>
+              <div className="flex-1 min-w-0">
+                <h2 className="font-semibold text-gray-900 dark:text-gray-100 text-sm truncate">{project.title}</h2>
+                <p className="text-xs text-gray-500 dark:text-gray-400 capitalize">{project.status}</p>
+              </div>
+              <button
+                onClick={() => {
+                  setActiveView('plot');
+                  setSidebarOpen(false);
+                }}
+                className={`p-2 rounded-md transition-colors ${
+                  activeView === 'plot' 
+                    ? 'bg-black text-white dark:bg-white dark:text-black' 
+                    : 'bg-gray-200 text-gray-600 hover:bg-black hover:text-white dark:bg-gray-700 dark:text-gray-400 dark:hover:bg-white dark:hover:text-black'
+                }`}
+                title="故事大纲"
+              >
+                <PenTool className="w-4 h-4" />
+              </button>
+            </div>
+            <button
+              onClick={() => setSidebarOpen(false)}
+              className="lg:hidden p-1 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-md transition-colors ml-2 text-gray-600 dark:text-gray-400"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+
+          {/* Progress Bar */}
+          {project.targetWords && (
+            <div className="p-4 border-b border-gray-200 dark:border-gray-700">
+              <div className="text-xs text-gray-600 dark:text-gray-400 mb-2">
+                {project.wordCount.toLocaleString()} / {project.targetWords.toLocaleString()} 字
+              </div>
+              <div className="w-full h-2 bg-gray-200 dark:bg-gray-700 rounded-full">
+                <div 
+                  className="h-2 bg-black dark:bg-white rounded-full transition-all duration-300"
+                  style={{ 
+                    width: `${Math.min(100, (project.wordCount / project.targetWords) * 100)}%` 
+                  }}
+                />
+              </div>
+              <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                {Math.round((project.wordCount / project.targetWords) * 100)}% 完成
               </div>
             </div>
-            
-            <div className="flex items-center space-x-4">
-              {project.targetWords && (
-                <div className="text-sm text-gray-600">
-                  {project.wordCount.toLocaleString()} / {project.targetWords.toLocaleString()} 字
-                  <div className="w-24 h-1 bg-gray-200 rounded-full mt-1">
-                    <div 
-                      className="h-1 bg-black rounded-full transition-all duration-300"
-                      style={{ 
-                        width: `${Math.min(100, (project.wordCount / project.targetWords) * 100)}%` 
-                      }}
-                    />
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
-          
-          {/* Navigation Tabs */}
-          <nav className="flex space-x-8 overflow-x-auto">
-            {navigationItems.map((item) => {
+          )}
+
+          {/* Sidebar Navigation */}
+          <nav className="flex-1 p-4 space-y-2">
+            {sidebarItems.map((item) => {
               const Icon = item.icon;
-              const currentPath = window.location.pathname;
-              const expectedPath = `/project/${projectId}/${item.path}`;
-              const isActive = currentPath === expectedPath || 
-                             (item.path === '' && currentPath === `/project/${projectId}`);
+              const isActive = activeView === item.id;
               
               return (
                 <button
                   key={item.id}
-                  onClick={() => navigate(`/project/${projectId}/${item.path}`)}
-                  className={`flex items-center space-x-2 py-3 px-1 border-b-2 font-medium text-sm whitespace-nowrap transition-colors ${
+                  onClick={() => {
+                    setActiveView(item.id);
+                    setSidebarOpen(false);
+                  }}
+                  className={`nav-tab w-full flex items-center space-x-3 px-3 py-2 rounded-md text-sm font-medium transition-colors ${
                     isActive
-                      ? 'border-black text-black'
-                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-black'
+                      ? 'bg-black text-white dark:bg-white dark:text-black'
+                      : 'text-gray-700 hover:bg-gray-200 dark:text-gray-300 dark:hover:bg-gray-700'
                   }`}
                 >
                   <Icon className="w-4 h-4" />
@@ -144,22 +170,54 @@ export const ProjectWorkspace: React.FC = () => {
               );
             })}
           </nav>
-        </div>
-      </header>
 
-      {/* Main Content */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-        <Routes>
-          <Route path="" element={<ProjectOverview project={project} onProjectUpdate={setProject} />} />
-          <Route path="characters" element={<CharactersManager projectId={projectId!} />} />
-          <Route path="world" element={<WorldSettingsManager projectId={projectId!} />} />
-          <Route path="plot" element={<PlotElementsManager projectId={projectId!} />} />
-          <Route path="timeline" element={<TimelineManager projectId={projectId!} />} />
-          <Route path="notes" element={<NotesManager projectId={projectId!} />} />
-          <Route path="settings" element={<ProjectSettings project={project} onProjectUpdate={setProject} />} />
-          <Route path="*" element={<Navigate to="" replace />} />
-        </Routes>
-      </main>
+          {/* Theme Toggle Button */}
+          <div className="p-4 border-t border-gray-200 dark:border-gray-700">
+            <button
+              onClick={toggleTheme}
+              className="theme-toggle-btn w-full flex items-center space-x-3 px-3 py-2 rounded-md text-sm font-medium transition-colors text-gray-700 hover:bg-gray-200 dark:text-gray-300 dark:hover:bg-gray-700"
+              title={isDark ? '切换到浅色模式' : '切换到深色模式'}
+            >
+              {isDark ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+              <span>{isDark ? '浅色模式' : '深色模式'}</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Sidebar Overlay for Mobile */}
+      {sidebarOpen && (
+        <div 
+          className="fixed inset-0 bg-black bg-opacity-50 z-40 lg:hidden"
+          onClick={() => setSidebarOpen(false)}
+        />
+      )}
+
+      {/* Main Content Area */}
+      <div className="flex-1 flex flex-col min-w-0 lg:ml-64">
+        {/* Top Header - Only for mobile menu */}
+        <header className="lg:hidden bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 px-4 py-3">
+          <div className="flex items-center">
+            <button
+              onClick={() => setSidebarOpen(true)}
+              className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-md transition-colors text-gray-600 dark:text-gray-400"
+            >
+              <Menu className="w-5 h-5" />
+            </button>
+          </div>
+        </header>
+
+        {/* Main Content - Full Screen Views */}
+        <main className="flex-1 p-6 overflow-auto lg:pt-6 pt-0 bg-white dark:bg-gray-900">
+          {activeView === 'plot' && <PlotElementsManager projectId={projectId!} project={project} />}
+          {activeView === 'overview' && <ProjectOverview project={project} onProjectUpdate={setProject} />}
+          {activeView === 'characters' && <CharactersManager projectId={projectId!} />}
+          {activeView === 'world' && <WorldSettingsManager projectId={projectId!} />}
+          {activeView === 'timeline' && <TimelineManager projectId={projectId!} />}
+          {activeView === 'notes' && <NotesManager projectId={projectId!} />}
+          {activeView === 'settings' && <ProjectSettings project={project} onProjectUpdate={setProject} />}
+        </main>
+      </div>
     </div>
   );
 };
