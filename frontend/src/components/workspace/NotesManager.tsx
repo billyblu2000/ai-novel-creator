@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { Plus, Search, Edit, Trash2, StickyNote, Tag } from 'lucide-react';
-import type { ProjectNote } from '../../types';
+import type { ProjectNote, CreateProjectNoteData, UpdateProjectNoteData } from '../../types';
 import { projectNotesApi } from '../../services/api';
+import { EditProjectNoteModal } from '../EditProjectNoteModal';
 
 interface NotesManagerProps {
   projectId: string;
@@ -21,7 +22,8 @@ export const NotesManager: React.FC<NotesManagerProps> = ({ projectId }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [selectedTag, setSelectedTag] = useState<string>('all');
-  const [, setShowCreateModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [editingNote, setEditingNote] = useState<ProjectNote | undefined>();
 
   useEffect(() => {
     loadNotes();
@@ -36,6 +38,46 @@ export const NotesManager: React.FC<NotesManagerProps> = ({ projectId }) => {
       console.error('Error loading notes:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleCreateNote = () => {
+    setEditingNote(undefined);
+    setShowEditModal(true);
+  };
+
+  const handleEditNote = (note: ProjectNote) => {
+    setEditingNote(note);
+    setShowEditModal(true);
+  };
+
+  const handleSaveNote = async (data: CreateProjectNoteData | UpdateProjectNoteData) => {
+    try {
+      if (editingNote) {
+        // 更新现有笔记
+        const updatedNote = await projectNotesApi.update(editingNote.id, data as UpdateProjectNoteData);
+        setNotes(prev => prev.map(n => n.id === editingNote.id ? updatedNote : n));
+      } else {
+        // 创建新笔记
+        const newNote = await projectNotesApi.create(data as CreateProjectNoteData);
+        setNotes(prev => [newNote, ...prev]);
+      }
+    } catch (error) {
+      console.error('Error saving project note:', error);
+      throw error;
+    }
+  };
+
+  const handleDeleteNote = async (note: ProjectNote) => {
+    if (!confirm(`确定要删除笔记"${note.title}"吗？此操作不可撤销。`)) {
+      return;
+    }
+
+    try {
+      await projectNotesApi.delete(note.id);
+      setNotes(prev => prev.filter(n => n.id !== note.id));
+    } catch (error) {
+      console.error('Error deleting project note:', error);
     }
   };
 
@@ -86,7 +128,7 @@ export const NotesManager: React.FC<NotesManagerProps> = ({ projectId }) => {
           <p className="text-gray-600">记录灵感、想法和创作资料</p>
         </div>
         <button
-          onClick={() => setShowCreateModal(true)}
+          onClick={handleCreateNote}
           className="flex items-center space-x-2 px-4 py-2 bg-black text-white rounded-md hover:bg-gray-800 transition-colors"
         >
           <Plus className="w-4 h-4" />
@@ -154,7 +196,7 @@ export const NotesManager: React.FC<NotesManagerProps> = ({ projectId }) => {
           </p>
           {notes.length === 0 && (
             <button
-              onClick={() => setShowCreateModal(true)}
+              onClick={handleCreateNote}
               className="px-4 py-2 bg-black text-white rounded-md hover:bg-gray-800 transition-colors"
             >
               创建笔记
@@ -173,10 +215,18 @@ export const NotesManager: React.FC<NotesManagerProps> = ({ projectId }) => {
                   </span>
                 </div>
                 <div className="flex items-center space-x-1">
-                  <button className="p-1 text-gray-400 hover:text-gray-600 transition-colors">
+                  <button 
+                    onClick={() => handleEditNote(note)}
+                    className="p-1 text-gray-400 hover:text-gray-600 transition-colors"
+                    title="编辑笔记"
+                  >
                     <Edit className="w-4 h-4" />
                   </button>
-                  <button className="p-1 text-gray-400 hover:text-red-600 transition-colors">
+                  <button 
+                    onClick={() => handleDeleteNote(note)}
+                    className="p-1 text-gray-400 hover:text-red-600 transition-colors"
+                    title="删除笔记"
+                  >
                     <Trash2 className="w-4 h-4" />
                   </button>
                 </div>
@@ -210,6 +260,15 @@ export const NotesManager: React.FC<NotesManagerProps> = ({ projectId }) => {
           ))}
         </div>
       )}
+
+      {/* 编辑模态框 */}
+      <EditProjectNoteModal
+        isOpen={showEditModal}
+        onClose={() => setShowEditModal(false)}
+        onSave={handleSaveNote}
+        note={editingNote}
+        projectId={projectId}
+      />
     </div>
   );
 };
