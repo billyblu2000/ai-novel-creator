@@ -161,7 +161,7 @@ router.post('/', async (req, res) => {
       if (autoCreateChildren && type !== 'chapter' && type !== 'scene' && type !== 'beat') {
         const childType = getChildType(type);
         if (childType) {
-          const childTitle = getDefaultChildTitle(type, title);
+          const childTitle = getDefaultChildTitle();
           await tx.plotElement.create({
             data: {
               projectId,
@@ -198,7 +198,7 @@ function getChildType(parentType: string): string | null {
 }
 
 // 辅助函数：生成默认子元素标题
-function getDefaultChildTitle(parentType: string, parentTitle: string): string {
+function getDefaultChildTitle(): string {
   return '默认标题';
 }
 
