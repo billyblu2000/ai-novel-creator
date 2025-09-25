@@ -10,10 +10,16 @@ import {
   Settings,
   ChevronLeft,
   ChevronRight,
-  Type
+  Type,
+  Plus,
+  Link,
+  Unlink
 } from 'lucide-react';
-import type { PlotElement, Character, WorldSetting } from '../types';
-import { plotElementsApi, charactersApi, worldSettingsApi } from '../services/api';
+import type { PlotElement, Character, WorldSetting, Timeline, CreateCharacterData, CreateWorldSettingData, CreateTimelineData } from '../types';
+import { plotElementsApi, charactersApi, worldSettingsApi, timelinesApi } from '../services/api';
+import { EditCharacterModal } from './EditCharacterModal';
+import { EditWorldSettingModal } from './EditWorldSettingModal';
+import { CreateTimelineModal } from './CreateTimelineModal';
 
 export const ChapterEditor: React.FC = () => {
   const { projectId, elementId } = useParams<{ projectId: string; elementId: string }>();
@@ -22,6 +28,7 @@ export const ChapterEditor: React.FC = () => {
   const [element, setElement] = useState<PlotElement | null>(null);
   const [characters, setCharacters] = useState<Character[]>([]);
   const [worldSettings, setWorldSettings] = useState<WorldSetting[]>([]);
+  const [timelines, setTimelines] = useState<Timeline[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
@@ -33,6 +40,13 @@ export const ChapterEditor: React.FC = () => {
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
   const [fontSize, setFontSize] = useState(18);
   const [fontFamily, setFontFamily] = useState('serif');
+
+  // Modal状态
+  const [showCreateCharacterModal, setShowCreateCharacterModal] = useState(false);
+  const [showCreateWorldSettingModal, setShowCreateWorldSettingModal] = useState(false);
+  const [showCreateTimelineModal, setShowCreateTimelineModal] = useState(false);
+  const [editingCharacter, setEditingCharacter] = useState<Character | null>(null);
+  const [editingWorldSetting, setEditingWorldSetting] = useState<WorldSetting | null>(null);
 
   // 编辑器状态
   const [title, setTitle] = useState('');
@@ -71,15 +85,17 @@ export const ChapterEditor: React.FC = () => {
     
     try {
       setLoading(true);
-      const [elementData, charactersData, worldSettingsData] = await Promise.all([
+      const [elementData, charactersData, worldSettingsData, timelinesData] = await Promise.all([
         plotElementsApi.getById(elementId),
         charactersApi.getByProject(projectId),
-        worldSettingsApi.getByProject(projectId)
+        worldSettingsApi.getByProject(projectId),
+        timelinesApi.getByProject(projectId)
       ]);
       
       setElement(elementData);
       setCharacters(charactersData);
       setWorldSettings(worldSettingsData);
+      setTimelines(timelinesData);
       
       // 设置表单数据
       setTitle(elementData.title);
@@ -149,7 +165,142 @@ export const ChapterEditor: React.FC = () => {
     }
   };
 
+  // 关联管理函数
+  const handleLinkCharacter = async (characterId: string) => {
+    if (!element) return;
+    try {
+      await plotElementsApi.linkCharacter(element.id, characterId);
+      loadData();
+    } catch (error) {
+      console.error('Error linking character:', error);
+    }
+  };
 
+  const handleUnlinkCharacter = async (characterId: string) => {
+    if (!element) return;
+    try {
+      await plotElementsApi.unlinkCharacter(element.id, characterId);
+      loadData();
+    } catch (error) {
+      console.error('Error unlinking character:', error);
+    }
+  };
+
+  const handleLinkWorldSetting = async (settingId: string) => {
+    if (!element) return;
+    try {
+      await plotElementsApi.linkSetting(element.id, settingId);
+      loadData();
+    } catch (error) {
+      console.error('Error linking world setting:', error);
+    }
+  };
+
+  const handleUnlinkWorldSetting = async (settingId: string) => {
+    if (!element) return;
+    try {
+      await plotElementsApi.unlinkSetting(element.id, settingId);
+      loadData();
+    } catch (error) {
+      console.error('Error unlinking world setting:', error);
+    }
+  };
+
+  const handleLinkTimeline = async (timelineId: string) => {
+    if (!element) return;
+    try {
+      await timelinesApi.linkPlotElement(timelineId, element.id, 'main');
+      loadData();
+    } catch (error) {
+      console.error('Error linking timeline:', error);
+    }
+  };
+
+  const handleUnlinkTimeline = async (timelineId: string) => {
+    if (!element) return;
+    try {
+      await timelinesApi.unlinkPlotElement(timelineId, element.id);
+      loadData();
+    } catch (error) {
+      console.error('Error unlinking timeline:', error);
+    }
+  };
+
+  // 创建并关联函数
+  const handleCreateAndLinkCharacter = async (data: CreateCharacterData) => {
+    try {
+      const newCharacter = await charactersApi.create(data);
+      if (element) {
+        await plotElementsApi.linkCharacter(element.id, newCharacter.id);
+      }
+      loadData();
+      setShowCreateCharacterModal(false);
+    } catch (error) {
+      console.error('Error creating and linking character:', error);
+    }
+  };
+
+  const handleCreateAndLinkWorldSetting = async (data: CreateWorldSettingData) => {
+    try {
+      const newSetting = await worldSettingsApi.create(data);
+      if (element) {
+        await plotElementsApi.linkSetting(element.id, newSetting.id);
+      }
+      loadData();
+      setShowCreateWorldSettingModal(false);
+    } catch (error) {
+      console.error('Error creating and linking world setting:', error);
+    }
+  };
+
+  const handleCreateAndLinkTimeline = async (data: CreateTimelineData) => {
+    try {
+      const newTimeline = await timelinesApi.create(data);
+      if (element) {
+        await timelinesApi.linkPlotElement(newTimeline.id, element.id, 'main');
+      }
+      loadData();
+      setShowCreateTimelineModal(false);
+    } catch (error) {
+      console.error('Error creating and linking timeline:', error);
+    }
+  };
+
+  // 编辑角色
+  const handleUpdateCharacter = async (id: string, data: any) => {
+    try {
+      await charactersApi.update(id, data);
+      loadData();
+      setEditingCharacter(null);
+    } catch (error) {
+      console.error('Error updating character:', error);
+    }
+  };
+
+  // 编辑世界设定
+  const handleUpdateWorldSetting = async (data: any) => {
+    if (!editingWorldSetting) return;
+    try {
+      await worldSettingsApi.update(editingWorldSetting.id, data);
+      loadData();
+      setEditingWorldSetting(null);
+    } catch (error) {
+      console.error('Error updating world setting:', error);
+    }
+  };
+
+  // 获取关联状态
+  const isCharacterLinked = (characterId: string) => {
+    return element?.characters?.some(c => c.characterId === characterId) || false;
+  };
+
+  const isWorldSettingLinked = (settingId: string) => {
+    return element?.settings?.some(s => s.settingId === settingId) || false;
+  };
+
+  const isTimelineLinked = (timelineId: string) => {
+    return element?.timelines?.some(t => t.timelineId === timelineId) || false;
+  };
 
   if (loading) {
     return (
@@ -376,43 +527,232 @@ export const ChapterEditor: React.FC = () => {
               </div>
             </div>
 
-            {/* 相关角色 */}
-            {characters.length > 0 && (
-              <div>
-                <h3 className="font-medium text-gray-900 dark:text-white mb-3 flex items-center">
-                  <Users className="w-4 h-4 mr-2" />
-                  相关角色
+            {/* 关联时间线 */}
+            <div>
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="font-medium text-gray-900 dark:text-white flex items-center">
+                  <Clock className="w-4 h-4 mr-2" />
+                  关联时间线
                 </h3>
-                <div className="space-y-2">
-                  {characters.slice(0, 5).map((character) => (
-                    <div key={character.id} className="flex items-center space-x-2 p-2 bg-white dark:bg-gray-700 rounded-md border border-gray-200 dark:border-gray-600">
-                      <div className="w-2 h-2 rounded-full bg-blue-500"></div>
-                      <span className="text-sm text-gray-900 dark:text-white font-medium">{character.name}</span>
+                <button
+                  onClick={() => setShowCreateTimelineModal(true)}
+                  className="p-1 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-md transition-colors"
+                  title="新建时间线"
+                >
+                  <Plus className="w-4 h-4" />
+                </button>
+              </div>
+              <div className="space-y-2">
+                {/* 已关联的时间线 */}
+                {element?.timelines?.map((timelineRelation) => {
+                  const timeline = timelines.find(t => t.id === timelineRelation.timelineId);
+                  if (!timeline) return null;
+                  return (
+                    <div key={timeline.id} className="flex items-center justify-between p-2 bg-white dark:bg-gray-700 rounded-md border border-gray-200 dark:border-gray-600">
+                      <div className="flex items-center space-x-2 flex-1">
+                        <div className="w-2 h-2 rounded-full bg-blue-500"></div>
+                        <span className="text-sm text-gray-900 dark:text-white font-medium">{timeline.name}</span>
+                        <span className="text-xs text-gray-500 dark:text-gray-400">{timelineRelation.relationship}</span>
+                      </div>
+                      <button
+                        onClick={() => handleUnlinkTimeline(timeline.id)}
+                        className="p-1 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-md transition-colors"
+                        title="取消关联"
+                      >
+                        <Unlink className="w-3 h-3" />
+                      </button>
+                    </div>
+                  );
+                })}
+                
+                {/* 未关联的时间线 */}
+                {timelines.filter(timeline => !isTimelineLinked(timeline.id)).map((timeline) => (
+                  <div key={timeline.id} className="flex items-center justify-between p-2 bg-gray-50 dark:bg-gray-800 rounded-md border border-gray-200 dark:border-gray-600">
+                    <div className="flex items-center space-x-2 flex-1">
+                      <div className="w-2 h-2 rounded-full bg-gray-400"></div>
+                      <span className="text-sm text-gray-600 dark:text-gray-400">{timeline.name}</span>
+                    </div>
+                    <button
+                      onClick={() => handleLinkTimeline(timeline.id)}
+                      className="p-1 text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-md transition-colors"
+                      title="添加关联"
+                    >
+                      <Link className="w-3 h-3" />
+                    </button>
+                  </div>
+                ))}
+                
+                {timelines.length === 0 && (
+                  <p className="text-sm text-gray-500 dark:text-gray-400 italic text-center py-2">
+                    暂无时间线，点击 + 创建
+                  </p>
+                )}
+              </div>
+            </div>
+
+            {/* 关联角色 */}
+            <div>
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="font-medium text-gray-900 dark:text-white flex items-center">
+                  <Users className="w-4 h-4 mr-2" />
+                  关联角色
+                </h3>
+                <button
+                  onClick={() => setShowCreateCharacterModal(true)}
+                  className="p-1 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-md transition-colors"
+                  title="新建角色"
+                >
+                  <Plus className="w-4 h-4" />
+                </button>
+              </div>
+              <div className="space-y-2">
+                {/* 已关联的角色 */}
+                {element?.characters?.map((characterRelation) => {
+                  const character = characters.find(c => c.id === characterRelation.characterId);
+                  if (!character) return null;
+                  return (
+                    <div key={character.id} className="flex items-center justify-between p-2 bg-white dark:bg-gray-700 rounded-md border border-gray-200 dark:border-gray-600">
+                      <div className="flex items-center space-x-2 flex-1">
+                        <div className="w-2 h-2 rounded-full bg-green-500"></div>
+                        <span className="text-sm text-gray-900 dark:text-white font-medium">{character.name}</span>
+                        <span className="text-xs text-gray-500 dark:text-gray-400">{character.role}</span>
+                      </div>
+                      <div className="flex items-center space-x-1">
+                        <button
+                          onClick={() => setEditingCharacter(character)}
+                          className="p-1 text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-600 rounded-md transition-colors"
+                          title="编辑角色"
+                        >
+                          <Settings className="w-3 h-3" />
+                        </button>
+                        <button
+                          onClick={() => handleUnlinkCharacter(character.id)}
+                          className="p-1 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-md transition-colors"
+                          title="取消关联"
+                        >
+                          <Unlink className="w-3 h-3" />
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+                
+                {/* 未关联的角色 */}
+                {characters.filter(character => !isCharacterLinked(character.id)).map((character) => (
+                  <div key={character.id} className="flex items-center justify-between p-2 bg-gray-50 dark:bg-gray-800 rounded-md border border-gray-200 dark:border-gray-600">
+                    <div className="flex items-center space-x-2 flex-1">
+                      <div className="w-2 h-2 rounded-full bg-gray-400"></div>
+                      <span className="text-sm text-gray-600 dark:text-gray-400">{character.name}</span>
                       <span className="text-xs text-gray-500 dark:text-gray-400">{character.role}</span>
                     </div>
-                  ))}
-                </div>
+                    <div className="flex items-center space-x-1">
+                      <button
+                        onClick={() => setEditingCharacter(character)}
+                        className="p-1 text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-600 rounded-md transition-colors"
+                        title="编辑角色"
+                      >
+                        <Settings className="w-3 h-3" />
+                      </button>
+                      <button
+                        onClick={() => handleLinkCharacter(character.id)}
+                        className="p-1 text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-md transition-colors"
+                        title="添加关联"
+                      >
+                        <Link className="w-3 h-3" />
+                      </button>
+                    </div>
+                  </div>
+                ))}
+                
+                {characters.length === 0 && (
+                  <p className="text-sm text-gray-500 dark:text-gray-400 italic text-center py-2">
+                    暂无角色，点击 + 创建
+                  </p>
+                )}
               </div>
-            )}
+            </div>
 
-            {/* 相关设定 */}
-            {worldSettings.length > 0 && (
-              <div>
-                <h3 className="font-medium text-gray-900 dark:text-white mb-3 flex items-center">
+            {/* 关联世界设定 */}
+            <div>
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="font-medium text-gray-900 dark:text-white flex items-center">
                   <MapPin className="w-4 h-4 mr-2" />
-                  相关设定
+                  关联设定
                 </h3>
-                <div className="space-y-2">
-                  {worldSettings.slice(0, 5).map((setting) => (
-                    <div key={setting.id} className="flex items-center space-x-2 p-2 bg-white dark:bg-gray-700 rounded-md border border-gray-200 dark:border-gray-600">
-                      <div className="w-2 h-2 rounded-full bg-green-500"></div>
-                      <span className="text-sm text-gray-900 dark:text-white font-medium">{setting.title}</span>
+                <button
+                  onClick={() => setShowCreateWorldSettingModal(true)}
+                  className="p-1 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-md transition-colors"
+                  title="新建世界设定"
+                >
+                  <Plus className="w-4 h-4" />
+                </button>
+              </div>
+              <div className="space-y-2">
+                {/* 已关联的世界设定 */}
+                {element?.settings?.map((settingRelation) => {
+                  const setting = worldSettings.find(s => s.id === settingRelation.settingId);
+                  if (!setting) return null;
+                  return (
+                    <div key={setting.id} className="flex items-center justify-between p-2 bg-white dark:bg-gray-700 rounded-md border border-gray-200 dark:border-gray-600">
+                      <div className="flex items-center space-x-2 flex-1">
+                        <div className="w-2 h-2 rounded-full bg-purple-500"></div>
+                        <span className="text-sm text-gray-900 dark:text-white font-medium">{setting.title}</span>
+                        <span className="text-xs text-gray-500 dark:text-gray-400">{setting.category}</span>
+                      </div>
+                      <div className="flex items-center space-x-1">
+                        <button
+                          onClick={() => setEditingWorldSetting(setting)}
+                          className="p-1 text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-600 rounded-md transition-colors"
+                          title="编辑设定"
+                        >
+                          <Settings className="w-3 h-3" />
+                        </button>
+                        <button
+                          onClick={() => handleUnlinkWorldSetting(setting.id)}
+                          className="p-1 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-md transition-colors"
+                          title="取消关联"
+                        >
+                          <Unlink className="w-3 h-3" />
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+                
+                {/* 未关联的世界设定 */}
+                {worldSettings.filter(setting => !isWorldSettingLinked(setting.id)).map((setting) => (
+                  <div key={setting.id} className="flex items-center justify-between p-2 bg-gray-50 dark:bg-gray-800 rounded-md border border-gray-200 dark:border-gray-600">
+                    <div className="flex items-center space-x-2 flex-1">
+                      <div className="w-2 h-2 rounded-full bg-gray-400"></div>
+                      <span className="text-sm text-gray-600 dark:text-gray-400">{setting.title}</span>
                       <span className="text-xs text-gray-500 dark:text-gray-400">{setting.category}</span>
                     </div>
-                  ))}
-                </div>
+                    <div className="flex items-center space-x-1">
+                      <button
+                        onClick={() => setEditingWorldSetting(setting)}
+                        className="p-1 text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-600 rounded-md transition-colors"
+                        title="编辑设定"
+                      >
+                        <Settings className="w-3 h-3" />
+                      </button>
+                      <button
+                        onClick={() => handleLinkWorldSetting(setting.id)}
+                        className="p-1 text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-md transition-colors"
+                        title="添加关联"
+                      >
+                        <Link className="w-3 h-3" />
+                      </button>
+                    </div>
+                  </div>
+                ))}
+                
+                {worldSettings.length === 0 && (
+                  <p className="text-sm text-gray-500 dark:text-gray-400 italic text-center py-2">
+                    暂无世界设定，点击 + 创建
+                  </p>
+                )}
               </div>
-            )}
+            </div>
           </div>
         </div>
       )}
@@ -604,6 +944,66 @@ export const ChapterEditor: React.FC = () => {
           </div>
         </div>
       )}
+
+      {/* 创建角色Modal */}
+      <EditCharacterModal
+        isOpen={showCreateCharacterModal}
+        onClose={() => setShowCreateCharacterModal(false)}
+        onSubmit={async (_, data) => {
+          if (!projectId) return;
+          await handleCreateAndLinkCharacter({
+            projectId,
+            name: data.name || '',
+            role: data.role || 'supporting',
+            description: data.description || '',
+            importance: data.importance || 5
+          });
+        }}
+        character={null}
+      />
+
+      {/* 编辑角色Modal */}
+      {editingCharacter && (
+        <EditCharacterModal
+          isOpen={!!editingCharacter}
+          onClose={() => setEditingCharacter(null)}
+          onSubmit={handleUpdateCharacter}
+          character={editingCharacter}
+        />
+      )}
+
+      {/* 创建世界设定Modal */}
+      <EditWorldSettingModal
+        isOpen={showCreateWorldSettingModal}
+        onClose={() => setShowCreateWorldSettingModal(false)}
+        onSave={async (data) => {
+          if ('projectId' in data) {
+            await handleCreateAndLinkWorldSetting(data as CreateWorldSettingData);
+          }
+        }}
+        projectId={projectId || ''}
+      />
+
+      {/* 编辑世界设定Modal */}
+      {editingWorldSetting && (
+        <EditWorldSettingModal
+          isOpen={!!editingWorldSetting}
+          onClose={() => setEditingWorldSetting(null)}
+          onSave={handleUpdateWorldSetting}
+          setting={editingWorldSetting}
+          projectId={projectId || ''}
+        />
+      )}
+
+      {/* 创建时间线Modal */}
+      <CreateTimelineModal
+        isOpen={showCreateTimelineModal}
+        onClose={() => setShowCreateTimelineModal(false)}
+        onSubmit={async (data) => {
+          await handleCreateAndLinkTimeline(data as CreateTimelineData);
+        }}
+        projectId={projectId || ''}
+      />
     </div>
   );
 };
