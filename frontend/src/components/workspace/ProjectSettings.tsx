@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
-import { Save, Trash2, Settings, Eye, AlertTriangle } from 'lucide-react';
+import { Save, Trash2, Settings, Eye, AlertTriangle, Download } from 'lucide-react';
 import type { Project } from '../../types';
 import { projectsApi } from '../../services/api';
+import { ExportModal } from '../ExportModal';
 
 interface ProjectSettingsProps {
   project: Project;
@@ -20,6 +21,7 @@ export const ProjectSettings: React.FC<ProjectSettingsProps> = ({ project, onPro
   });
   const [saving, setSaving] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [showExportModal, setShowExportModal] = useState(false);
   
   // 检查是否有多个卷，如果有则不允许切换到简化视图
   const hasMultipleParts = () => {
@@ -326,8 +328,16 @@ export const ProjectSettings: React.FC<ProjectSettingsProps> = ({ project, onPro
         </div>
       </div>
 
-      {/* Save Button */}
-      <div className="flex justify-center">
+      {/* Action Buttons */}
+      <div className="flex justify-center space-x-4">
+        <button
+          onClick={() => setShowExportModal(true)}
+          className="flex items-center space-x-3 px-6 py-4 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 text-base font-medium border-2 border-gray-300 dark:border-gray-600 rounded-xl hover:border-black dark:hover:border-white transition-all shadow-lg hover:shadow-xl"
+        >
+          <Download className="w-5 h-5" />
+          <span>导出项目</span>
+        </button>
+        
         <button
           onClick={handleSave}
           disabled={saving || !formData.title.trim()}
@@ -401,6 +411,13 @@ export const ProjectSettings: React.FC<ProjectSettingsProps> = ({ project, onPro
           </div>
         </div>
       )}
+
+      {/* Export Modal */}
+      <ExportModal
+        isOpen={showExportModal}
+        onClose={() => setShowExportModal(false)}
+        project={project}
+      />
     </div>
   );
 };

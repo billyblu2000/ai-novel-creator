@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { Users, Globe, BookOpen, Clock, StickyNote, Calendar, BarChart3, Target, TrendingUp } from 'lucide-react';
+import { Users, Globe, BookOpen, Clock, StickyNote, Calendar, BarChart3, Target, TrendingUp, Download } from 'lucide-react';
 import type { Project, ProjectStats } from '../../types';
 import { projectsApi } from '../../services/api';
+import { ExportModal } from '../ExportModal';
 
 interface ProjectOverviewProps {
   project: Project;
@@ -11,6 +12,7 @@ interface ProjectOverviewProps {
 export const ProjectOverview: React.FC<ProjectOverviewProps> = ({ project }) => {
   const [stats, setStats] = useState<ProjectStats | null>(null);
   const [loading, setLoading] = useState(true);
+  const [showExportModal, setShowExportModal] = useState(false);
 
   useEffect(() => {
     loadStats();
@@ -278,7 +280,7 @@ export const ProjectOverview: React.FC<ProjectOverviewProps> = ({ project }) => 
         </div>
         
         <div className="p-6">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
             <button className="p-6 border-2 border-gray-200 dark:border-gray-600 rounded-xl hover:border-black dark:hover:border-white hover:bg-gray-50 dark:hover:bg-gray-700 transition-all duration-200 text-left group">
               <div className="w-12 h-12 bg-blue-100 dark:bg-blue-900/30 rounded-lg flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
                 <Users className="w-6 h-6 text-blue-600 dark:text-blue-400" />
@@ -302,9 +304,27 @@ export const ProjectOverview: React.FC<ProjectOverviewProps> = ({ project }) => 
               <h3 className="text-base font-semibold text-gray-900 dark:text-gray-100 mb-2">记录灵感</h3>
               <p className="text-sm text-gray-600 dark:text-gray-400">添加创作笔记，保存创意想法</p>
             </button>
+            
+            <button 
+              onClick={() => setShowExportModal(true)}
+              className="p-6 border-2 border-gray-200 dark:border-gray-600 rounded-xl hover:border-black dark:hover:border-white hover:bg-gray-50 dark:hover:bg-gray-700 transition-all duration-200 text-left group"
+            >
+              <div className="w-12 h-12 bg-orange-100 dark:bg-orange-900/30 rounded-lg flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+                <Download className="w-6 h-6 text-orange-600 dark:text-orange-400" />
+              </div>
+              <h3 className="text-base font-semibold text-gray-900 dark:text-gray-100 mb-2">导出项目</h3>
+              <p className="text-sm text-gray-600 dark:text-gray-400">导出为 TXT 或 Markdown 格式</p>
+            </button>
           </div>
         </div>
       </div>
+
+      {/* Export Modal */}
+      <ExportModal
+        isOpen={showExportModal}
+        onClose={() => setShowExportModal(false)}
+        project={project}
+      />
     </div>
   );
 };
