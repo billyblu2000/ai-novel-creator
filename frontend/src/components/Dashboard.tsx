@@ -3,7 +3,7 @@ import { Plus, Search, Users, Globe, BookOpen, Clock } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import type { Project, ProjectStats } from '../types';
 import { projectsApi } from '../services/api';
-
+import { UserMenu } from './UserMenu';
 import { useTheme } from '../contexts/ThemeContext';
 
 export const Dashboard: React.FC = () => {
@@ -108,13 +108,16 @@ export const Dashboard: React.FC = () => {
             <h1 className="text-3xl font-bold text-black dark:text-white">AI Novel Creator</h1>
             <p className="text-gray-600 dark:text-gray-400 mt-1">管理你的小说项目</p>
           </div>
-          <button
-            onClick={() => navigate('/create')}
-            className="flex items-center space-x-2 px-4 py-2 bg-black text-white hover:bg-gray-800 dark:bg-white dark:text-black dark:hover:bg-gray-200 rounded-md transition-colors"
-          >
-            <Plus className="w-4 h-4" />
-            <span>新建项目</span>
-          </button>
+          <div className="flex items-center space-x-4">
+            <button
+              onClick={() => navigate('/create')}
+              className="flex items-center space-x-2 px-4 py-2 bg-black text-white hover:bg-gray-800 dark:bg-white dark:text-black dark:hover:bg-gray-200 rounded-md transition-colors"
+            >
+              <Plus className="w-4 h-4" />
+              <span>新建项目</span>
+            </button>
+            <UserMenu />
+          </div>
         </div>
 
         {/* Filters */}

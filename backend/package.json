@@ -17,10 +17,14 @@
   "description": "",
   "dependencies": {
     "@prisma/client": "^6.16.2",
+    "@types/bcryptjs": "^2.4.6",
+    "@types/jsonwebtoken": "^9.0.10",
     "@types/pg": "^8.11.10",
+    "bcryptjs": "^3.0.2",
     "cors": "^2.8.5",
     "dotenv": "^17.2.2",
     "express": "^5.1.0",
+    "jsonwebtoken": "^9.0.2",
     "lancedb": "^0.0.1",
     "openai": "^5.22.1",
     "pg": "^8.13.1"

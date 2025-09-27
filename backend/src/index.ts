@@ -1,12 +1,14 @@
 import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
+import authRoutes from './routes/auth';
 import projectRoutes from './routes/projects';
 import characterRoutes from './routes/characters';
 import worldSettingRoutes from './routes/worldSettings';
 import plotElementRoutes from './routes/plotElements';
 import timelineRoutes from './routes/timelines';
 import projectNoteRoutes from './routes/projectNotes';
+import { authenticateToken } from './middleware/auth';
 
 dotenv.config();
 
@@ -32,12 +34,13 @@ app.get('/api/health', (_req, res) => {
 });
 
 // API路由
-app.use('/api/projects', projectRoutes);
-app.use('/api/characters', characterRoutes);
-app.use('/api/world-settings', worldSettingRoutes);
-app.use('/api/plot-elements', plotElementRoutes);
-app.use('/api/timelines', timelineRoutes);
-app.use('/api/project-notes', projectNoteRoutes);
+app.use('/api/auth', authRoutes); // 认证路由不需要认证
+app.use('/api/projects', authenticateToken, projectRoutes);
+app.use('/api/characters', authenticateToken, characterRoutes);
+app.use('/api/world-settings', authenticateToken, worldSettingRoutes);
+app.use('/api/plot-elements', authenticateToken, plotElementRoutes);
+app.use('/api/timelines', authenticateToken, timelineRoutes);
+app.use('/api/project-notes', authenticateToken, projectNoteRoutes);
 
 // 404处理
 app.use('/api', (_req, res) => {

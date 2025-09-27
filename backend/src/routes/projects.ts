@@ -5,9 +5,15 @@ const router = express.Router();
 const prisma = new PrismaClient();
 
 // GET /api/projects - 获取所有项目
-router.get('/', async (_req, res) => {
+router.get('/', async (req, res) => {
   try {
+    const userId = req.user?.id;
+    if (!userId) {
+      return res.status(401).json({ error: 'User not authenticated' });
+    }
+
     const projects = await prisma.project.findMany({
+      where: { userId },
       include: {
         _count: {
           select: {
@@ -32,8 +38,13 @@ router.get('/', async (_req, res) => {
 router.get('/:id', async (req, res) => {
   try {
     const { id } = req.params;
+    const userId = req.user?.id;
+    if (!userId) {
+      return res.status(401).json({ error: 'User not authenticated' });
+    }
+
     const project = await prisma.project.findUnique({
-      where: { id },
+      where: { id, userId },
       include: {
         characters: {
           select: { id: true, name: true, role: true, importance: true },
@@ -86,6 +97,11 @@ router.get('/:id', async (req, res) => {
 // POST /api/projects - 创建新项目
 router.post('/', async (req, res) => {
   try {
+    const userId = req.user?.id;
+    if (!userId) {
+      return res.status(401).json({ error: 'User not authenticated' });
+    }
+
     const { 
       title, 
       description, 
@@ -109,6 +125,7 @@ router.post('/', async (req, res) => {
       // 创建项目
       const project = await tx.project.create({
         data: {
+          userId,
           title: title.trim(),
           description: description?.trim() || null,
           genre: genre || null,
@@ -168,6 +185,11 @@ router.post('/', async (req, res) => {
 router.put('/:id', async (req, res) => {
   try {
     const { id } = req.params;
+    const userId = req.user?.id;
+    if (!userId) {
+      return res.status(401).json({ error: 'User not authenticated' });
+    }
+
     const { title, description, genre, status, targetWords, plotViewMode, levelNames } = req.body;
     
     const updateData: any = {};
@@ -180,7 +202,7 @@ router.put('/:id', async (req, res) => {
     if (levelNames !== undefined) updateData.levelNames = levelNames;
     
     const project = await prisma.project.update({
-      where: { id },
+      where: { id, userId },
       data: updateData
     });
     
@@ -198,9 +220,13 @@ router.put('/:id', async (req, res) => {
 router.delete('/:id', async (req, res) => {
   try {
     const { id } = req.params;
+    const userId = req.user?.id;
+    if (!userId) {
+      return res.status(401).json({ error: 'User not authenticated' });
+    }
     
     await prisma.project.delete({
-      where: { id }
+      where: { id, userId }
     });
     
     return res.status(204).send();
@@ -217,10 +243,14 @@ router.delete('/:id', async (req, res) => {
 router.get('/:id/stats', async (req, res) => {
   try {
     const { id } = req.params;
+    const userId = req.user?.id;
+    if (!userId) {
+      return res.status(401).json({ error: 'User not authenticated' });
+    }
     
     // 检查项目是否存在
     const project = await prisma.project.findUnique({
-      where: { id },
+      where: { id, userId },
       select: { id: true, wordCount: true, targetWords: true }
     });
     
