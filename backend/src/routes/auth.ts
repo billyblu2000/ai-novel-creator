@@ -1,6 +1,6 @@
 import express from 'express';
 import bcrypt from 'bcryptjs';
-import jwt from 'jsonwebtoken';
+import jwt, { SignOptions } from 'jsonwebtoken';
 import { PrismaClient } from '@prisma/client';
 
 const router = express.Router();
@@ -64,18 +64,18 @@ router.post('/register', async (req, res) => {
     // 生成JWT token
     const token = jwt.sign(
       { userId: user.id, email: user.email },
-      JWT_SECRET,
-      { expiresIn: JWT_EXPIRES_IN }
+      JWT_SECRET as string,
+      { expiresIn: JWT_EXPIRES_IN } as SignOptions
     );
 
-    res.status(201).json({
+    return res.status(201).json({
       message: '注册成功',
       user,
       token
     });
   } catch (error) {
     console.error('Registration error:', error);
-    res.status(500).json({ error: '注册失败，请稍后重试' });
+    return res.status(500).json({ error: '注册失败，请稍后重试' });
   }
 });
 
@@ -107,21 +107,21 @@ router.post('/login', async (req, res) => {
     // 生成JWT token
     const token = jwt.sign(
       { userId: user.id, email: user.email },
-      JWT_SECRET,
-      { expiresIn: JWT_EXPIRES_IN }
+      JWT_SECRET as string,
+      { expiresIn: JWT_EXPIRES_IN } as SignOptions
     );
 
     // 返回用户信息（不包含密码）
     const { password: _, ...userWithoutPassword } = user;
 
-    res.json({
+    return res.json({
       message: '登录成功',
       user: userWithoutPassword,
       token
     });
   } catch (error) {
     console.error('Login error:', error);
-    res.status(500).json({ error: '登录失败，请稍后重试' });
+    return res.status(500).json({ error: '登录失败，请稍后重试' });
   }
 });
 
@@ -134,7 +134,7 @@ router.get('/me', async (req, res) => {
       return res.status(401).json({ error: '未提供认证token' });
     }
 
-    const decoded = jwt.verify(token, JWT_SECRET) as { userId: string };
+    const decoded = jwt.verify(token, JWT_SECRET as string) as { userId: string };
     
     const user = await prisma.user.findUnique({
       where: { id: decoded.userId },
@@ -151,10 +151,10 @@ router.get('/me', async (req, res) => {
       return res.status(404).json({ error: '用户不存在' });
     }
 
-    res.json({ user });
+    return res.json({ user });
   } catch (error) {
     console.error('Get user error:', error);
-    res.status(401).json({ error: '无效的认证token' });
+    return res.status(401).json({ error: '无效的认证token' });
   }
 });
 
@@ -167,7 +167,7 @@ router.put('/profile', async (req, res) => {
       return res.status(401).json({ error: '未提供认证token' });
     }
 
-    const decoded = jwt.verify(token, JWT_SECRET) as { userId: string };
+    const decoded = jwt.verify(token, JWT_SECRET as string) as { userId: string };
     const { username, avatar } = req.body;
 
     // 检查用户名是否已被使用（排除当前用户）
@@ -199,13 +199,13 @@ router.put('/profile', async (req, res) => {
       }
     });
 
-    res.json({
+    return res.json({
       message: '用户信息更新成功',
       user: updatedUser
     });
   } catch (error) {
     console.error('Update profile error:', error);
-    res.status(500).json({ error: '更新失败，请稍后重试' });
+    return res.status(500).json({ error: '更新失败，请稍后重试' });
   }
 });
 

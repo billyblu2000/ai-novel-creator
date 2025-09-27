@@ -18,13 +18,14 @@ declare global {
   }
 }
 
-export const authenticateToken = async (req: Request, res: Response, next: NextFunction) => {
+export const authenticateToken = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
     const authHeader = req.headers.authorization;
     const token = authHeader && authHeader.split(' ')[1]; // Bearer TOKEN
 
     if (!token) {
-      return res.status(401).json({ error: '访问被拒绝，需要认证token' });
+      res.status(401).json({ error: '访问被拒绝，需要认证token' });
+      return;
     }
 
     const decoded = jwt.verify(token, JWT_SECRET) as { userId: string; email: string };
@@ -40,7 +41,8 @@ export const authenticateToken = async (req: Request, res: Response, next: NextF
     });
 
     if (!user) {
-      return res.status(401).json({ error: '用户不存在' });
+      res.status(401).json({ error: '用户不存在' });
+      return;
     }
 
     req.user = user;
@@ -52,7 +54,7 @@ export const authenticateToken = async (req: Request, res: Response, next: NextF
 };
 
 // 可选的认证中间件（用于某些可以匿名访问的路由）
-export const optionalAuth = async (req: Request, res: Response, next: NextFunction) => {
+export const optionalAuth = async (req: Request, _res: Response, next: NextFunction): Promise<void> => {
   try {
     const authHeader = req.headers.authorization;
     const token = authHeader && authHeader.split(' ')[1];
